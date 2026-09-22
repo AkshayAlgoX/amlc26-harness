@@ -1,0 +1,40 @@
+# =====================================================================
+# config.synthetic.yaml — smoke-test config (fake data). Used via AMLC_CONFIG=config.synthetic.yaml
+# Defaults below match the 2025 edition (price prediction) so the
+# Wednesday rehearsal on the 2025 Kaggle data works out of the box.
+# =====================================================================
+competition: amazon-ml-challenge-2026
+
+paths:
+  train: data/synthetic/train.csv
+  test: data/synthetic/test.csv
+  sample_submission: data/synthetic/sample_test_out.csv   # used for column names/order only
+  folds: data/synthetic/folds.csv
+  artifacts: artifacts_smoke
+
+columns:
+  id: sample_id
+  target: price
+  text: [catalog_content]   # concatenated for the fold diagnostic + text baselines
+  image_url: image_link     # null if the task has no images
+  group: null               # a column to group folds by; null = auto family key from text
+
+task:
+  type: regression          # regression | classification | extraction
+  metric: smape             # smape | mape_score | mae | rmse | rmsle | f1_extraction | accuracy | macro_f1
+  positive_only: true       # regression: submissions must be > 0
+  pred_regex: null          # extraction: every non-empty prediction must fullmatch this
+
+folds:
+  n_splits: 5
+  scheme: stratified        # kfold | stratified | group | stratified_group  (run `diagnose` first)
+  seed: 42
+  n_bins: 20                # regression stratification: quantile bins of log1p(target)
+  strat_col: null           # optional column to stratify on instead (e.g. entity_name)
+
+submission:
+  id_col: sample_id
+  pred_col: price
+
+quick:
+  frac: 0.1                 # QUICK=1 runs use this fraction of every fold (and of test)

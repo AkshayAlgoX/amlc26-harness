@@ -1,0 +1,12 @@
+# data never goes to git (rules + size). folds.csv DOES go to git.
+data/raw/
+data/synthetic/
+data/images/
+artifacts/
+artifacts_smoke/
+submissions/*.csv
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+.venv/
