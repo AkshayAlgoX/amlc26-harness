@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export AMLC_CONFIG=config.synthetic.yaml
+export AMLC_ARTIFACTS="$PWD/artifacts_smoke"
 PY=${PY:-python}
 rm -rf artifacts_smoke data/synthetic
 $PY scripts/make_synthetic.py

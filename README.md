@@ -41,6 +41,7 @@ Teammates without agents: see `experiments/NOTEBOOK_SNIPPET.md` — train howeve
 
 ## Sharing artifacts between 3 people
 Every run writes its own files, so syncing never conflicts. Pick one hub:
+- **Shared local worktree**: Set `AMLC_ARTIFACTS=~/amlc26-shared/artifacts` and symlink `data/raw` to `~/amlc26-shared/raw`.
 - **GPU box as hub**: everyone copies their `oof/`, `test/`, `logs/` files into `/workspace/amlc/artifacts/`.
 - **Shared Drive folder**: in Colab mount Drive and `os.environ["AMLC_ARTIFACTS"] = "/content/drive/MyDrive/amlc26-artifacts"`;
   Kaggle users download their 3 files and drop them in; the captain syncs the folder locally and blends there.
@@ -58,6 +59,8 @@ Every run writes its own files, so syncing never conflicts. Pick one hub:
 Log every upload in `submissions/LOG.md` (time, file, CV, public LB). Final pick = best **local CV**, not best public LB.
 
 ## Wednesday rehearsal
-The 2025 dataset is on Kaggle. Its columns already match `config.yaml`. Drop it in `data/raw/`, split off
-nothing (test labels aren't public — local CV is your score), and run the Day-1 list end to end against a
-12-hour clock. Write down everything that broke.
+Use the isolated rehearsal procedure from the audit so rehearsal never touches:
+* real data/raw
+* real data/folds.csv
+* real shared artifacts
+* real experiment IDs
