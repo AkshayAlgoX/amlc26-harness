@@ -59,7 +59,7 @@ Every run writes its own files, so syncing never conflicts. Pick one hub:
 Log every upload in `submissions/LOG.md` (time, file, CV, public LB). Final pick = best **local CV**, not best public LB.
 
 ## Wednesday rehearsal
-Use the isolated rehearsal procedure from the audit so rehearsal never touches:
+Use the isolated rehearsal setup in `~/amlc26-rehearsal` so rehearsal never touches:
 * real data/raw
 * real data/folds.csv
 * real shared artifacts
