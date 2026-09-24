@@ -183,3 +183,24 @@ Related experiment:
 
 Related commit:
 - see contributions entry
+
+## [2026-09-25 05:27:08+05:30]
+
+Task:
+- Remove committed organiser-derived data (data/val_s1_50k.tsv, data/val_gt_50k.tsv) from unpushed ein/agy2 history.
+
+Prompt summary:
+- Captain instruction: "remove the committed data files from unpushed history".
+
+Expected output:
+- Rewritten unpushed commits without the files; files kept locally; identity preserved.
+
+Actual result:
+- git filter-branch --index-filter over origin/ein/agy2..ein/agy2 (7 commits); only the two files dropped; author/committer/dates/messages identical; files kept on disk (untracked) and ignored via .git/info/exclude (data/val_*.tsv). 49/49 tests pass. Not pushed.
+- SHA map (earlier log entries cite the old SHAs): 087f0b2→98d8244, c7fd160→99b5eba, 6279c50→f4ad5d5, 2fc16d2→982f2ad, 7f51cb1→1860100 (91f8d30, 639bed4 unchanged)
+
+Related experiment:
+- n/a
+
+Related commit:
+- see contributions entry

@@ -198,3 +198,26 @@ Decision:
 
 Next:
 - Captain decision on committed organiser-derived data files (data/val_s1_50k.tsv, data/val_gt_50k.tsv in 087f0b2, not pushed).
+
+## [2026-09-25 05:27:08+05:30]
+
+Task:
+- Purge organiser-derived data files from unpushed ein/agy2 history.
+
+Files changed:
+- History rewrite only (data/val_s1_50k.tsv, data/val_gt_50k.tsv removed from all unpushed commits); this log entry.
+
+Experiment:
+- n/a
+
+Result:
+- No commit reachable from ein/agy2 contains the files; origin never had them. Old→new SHAs: 087f0b2→98d8244, c7fd160→99b5eba, 6279c50→f4ad5d5, 2fc16d2→982f2ad, 7f51cb1→1860100 (91f8d30, 639bed4 unchanged). Old commits remain only in the local backup ref refs/original/refs/heads/ein/agy2.
+
+Commit:
+- this commit (docs only)
+
+Decision:
+- Keep. Delete the local backup ref once the captain confirms.
+
+Next:
+- Captain: push ein/agy2 when ready (normal push; origin/ein/agy2 is an ancestor, no force needed).
