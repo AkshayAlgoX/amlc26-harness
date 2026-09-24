@@ -158,6 +158,6 @@ Related experiment:
 - agy2-retrieval-003
 
 Related commit:
-- Pending
+- 6279c50 (feat(retrieval): controlled retrieval ablation on 50k S1 with frequency-capped B3 and budget constraints)
 
 

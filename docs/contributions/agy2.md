@@ -162,7 +162,7 @@ Result:
 - 28/28 tests pass in pytest.
 
 Commit:
-- Pending
+- 6279c50: feat(retrieval): controlled retrieval ablation on 50k S1 with frequency-capped B3 and budget constraints
 
 Decision:
 - Keep. Establish Config 6 + F@100 + R@5 as the official candidate generation foundation for downstream LightGBM pairwise ranking.
