@@ -54,7 +54,7 @@ Result:
 - Validator integration verified: catches CSV headers, missing S1s, self-matches.
 
 Commit:
-- Will commit code + logs together in this step.
+- 91f8d30: feat(er): add task-specific business entity resolution skeleton and macro F0.5 scoring
 
 Decision:
 - Keep. Architecture ready to consume real data post-audit.

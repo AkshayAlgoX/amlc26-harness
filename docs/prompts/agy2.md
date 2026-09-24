@@ -51,4 +51,4 @@ Related experiment:
 - None (architecture & harness setup).
 
 Related commit:
-- Pending commit alongside contribution log.
+- 91f8d30 (feat(er): add task-specific business entity resolution skeleton and macro F0.5 scoring)
