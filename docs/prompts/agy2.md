@@ -117,5 +117,5 @@ Related experiment:
 - agy2-retrieval-002
 
 Related commit:
-- Pending
+- 087f0b2 (feat(retrieval): benchmark complementary channels and attack 3.08% residual on 50k S1)
 

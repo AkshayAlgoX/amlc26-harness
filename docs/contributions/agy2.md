@@ -116,7 +116,7 @@ Result:
 - 28/28 tests pass in pytest.
 
 Commit:
-- Pending
+- 087f0b2: feat(retrieval): benchmark complementary channels and attack 3.08% residual on 50k S1
 
 Decision:
 - Keep as foundational retrieval pipeline for candidate_pairs generation and ranking.
