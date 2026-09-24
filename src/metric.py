@@ -87,6 +87,13 @@ def macro_f1(y_true, y_pred) -> float:
     return float(f1_score(np.asarray(y_true, dtype=str), np.asarray(y_pred, dtype=str), average="macro"))
 
 
+def macro_f05(y_true, y_pred) -> float:
+    """2026 definition: Macro F_0.5 per Source 1 entity for Business Entity Resolution."""
+    from .er.metric import macro_f05 as _macro_f05
+
+    return _macro_f05(y_true, y_pred)
+
+
 # name -> (function, greater_is_better)
 METRICS = {
     "smape": (smape, False),
@@ -97,6 +104,8 @@ METRICS = {
     "f1_extraction": (f1_extraction, True),
     "accuracy": (accuracy, True),
     "macro_f1": (macro_f1, True),
+    "macro_f05": (macro_f05, True),
+    "f05_macro": (macro_f05, True),
 }
 
 
