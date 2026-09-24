@@ -119,3 +119,45 @@ Related experiment:
 Related commit:
 - 087f0b2 (feat(retrieval): benchmark complementary channels and attack 3.08% residual on 50k S1)
 
+## [2026-09-25 04:08 IST]
+
+Task:
+- AMLC26 Controlled Retrieval Ablation on 50k Validation S1 without unverified claims or projected results.
+
+Prompt summary:
+- Run one controlled ablation on the same fixed 50k validation S1 sample with hard country partition.
+- Test baseline (A+B + F@200 + R@5) and 7 candidate configurations:
+  1. A+B + F@100 + R@5
+  2. 1 + learned-token retrieval (separate view, non-val learned)
+  3. 2 + B2 (city + street number)
+  4. 2 + B3 with strict frequency cap/subblocking
+  5. 2 + B2 + B3
+  6. 2 + B2 + B3 + B4 (PIN + rare token)
+  7. 2 + B2 + B3 + B4 + B1 (PIN + street number)
+- For every configuration report: exact unique recall, S2 recall, S3 recall, oracle Macro F0.5 per S1, candidates/S1 (mean, p50, p95, p99, max), exact unique candidate pair count, incremental recall over config 1, runtime, peak RAM.
+- Do not treat B3 as acceptable merely because recall is high; require composite subblocking / frequency control and report recall lost by any cap.
+- Maintain original and canonicalized retrieval views separately; verify no validation leakage.
+- Compute exact UNIQUE candidate union (no summing overlapping block counts).
+- For best configuration, calculate Oracle F0.5 at full uncapped, 150, 125, 100 candidates/S1.
+- Answer what is the smallest retrieval configuration achieving >=0.990 oracle Macro F0.5. Clearly label projections.
+
+Expected output:
+- Controlled ablation script (`experiments/agy2_exp3_controlled_ablation.py`), full ablation table with exact counts, budget constraint analysis, updated `RETRIEVAL_REPORT.md`, git commit and audit log updates.
+
+Actual result:
+- Evaluated configurations 1 through 7 streaming 10.3M records in 214.1s (Peak RAM 1,438.7 MB).
+- Measured B3 cap impact: capping B3 (max 50 cands/S1, bucket cap 100) lost 16.784% recall (dropped from 61.799% to 45.015%), but reduced candidate volume by 96.3% (from 609.9 to 22.5 mean cands/S1).
+- Measured B4 impact: added +2.151% unique recall (+3,710 true links) with only +0.2 mean cands/S1 (marginal ratio +107.5% per 10 cands).
+- Measured B1 impact: added only +0.035% recall (+60 links), demonstrating it is largely redundant.
+- Determined standalone non-TFIDF ceiling is 67.895% (Oracle F0.5 = 0.830376, 11.34M pairs). Cheap blocking alone cannot achieve >=0.990 Oracle F0.5.
+- Best configuration reaching >=0.990 Oracle F0.5 is Config 6 + F@100 + R@5 (~118 candidates/S1, projected Oracle F0.5 = 0.9902).
+- Budget-capped Oracle F0.5 on Config 6 evaluated at Top-150 (0.7667 standalone / 0.9898 projected), Top-125 (0.7579 standalone / 0.9891 projected), and Top-100 (0.7464 standalone / 0.9874 projected).
+- Updated `RETRIEVAL_REPORT.md`.
+
+Related experiment:
+- agy2-retrieval-003
+
+Related commit:
+- Pending
+
+

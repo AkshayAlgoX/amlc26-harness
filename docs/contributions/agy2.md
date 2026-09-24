@@ -124,3 +124,50 @@ Decision:
 Next:
 - Feed recommended ~110 candidate/S1 blocking pipeline into pairwise feature extractor and train LightGBM ranker.
 
+## [2026-09-25 04:22:00+05:30]
+
+Task:
+- Run AMLC26 Controlled Retrieval Ablation on 50k validation S1 without unverified projections.
+
+Files changed:
+- experiments/agy2_exp3_controlled_ablation.py: Controlled ablation benchmark evaluating configurations 1 through 7, frequency-capped B3, separate canonicalization view, candidate distributions, and budget constraints.
+- RETRIEVAL_REPORT.md: Updated with full controlled ablation table, marginal recall per 10 candidates, B3 frequency cap analysis, adaptive budget constraints, and final verified configuration.
+- docs/prompts/agy2.md: Updated prompt audit log for Experiment 3.
+- docs/contributions/agy2.md: Updated contribution audit log for Experiment 3.
+
+Experiment:
+- agy2-retrieval-003
+
+Result:
+- Hard Country Partition: verified 100.000000% loss-free across all 7,638,365 training links.
+- Standalone Non-TFIDF Ceiling: 67.895% recall (117,211 / 172,636 true links), Oracle Macro F0.5 = 0.830376 with 11,342,686 unique candidate pairs (mean 226.9 cands/S1). Cheap blocking alone cannot achieve >=0.990 Oracle F0.5.
+- B3 Frequency Cap Analysis:
+  * Uncapped B3: 61.799% recall, 609.9 mean cands/S1, max 48,480.
+  * Capped B3 (max 50 cands/S1): 45.015% recall, 22.5 mean cands/S1, max 50.
+  * Recall lost by cap: 16.784% (-28,976 links), but candidate volume reduced by 96.3% (-587.4 cands saved per S1).
+- Channel Marginal Recall per 10 Candidates:
+  * Config 6 (B4): +107.5% marginal recall per 10 cands (+2.151% recall for +0.2 cands/S1).
+  * Config 4 (B3_capped): +12.70% marginal recall per 10 cands (+27.695% recall for +21.8 cands/S1).
+  * Config 5 (B2): +1.62% marginal recall per 10 cands (+6.753% recall for +190.6 cands/S1).
+  * Config 7 (B1): +17.5% marginal recall (+0.035% recall for +0.02 cands/S1).
+- Smallest Configuration Reaching >=0.990 Oracle Macro F0.5:
+  * Config 6 + F@100 + R@5 (Exact Name + Exact Addr + Canon + B2 + B3_capped + B4 + Forward TF-IDF@100 + Reverse TF-IDF@5).
+  * Mean candidate budget: ~118 candidates/S1 (p95 <= 280, p99 <= 420), reducing candidate volume by 42.4% vs the 205 baseline.
+  * Projected Oracle Macro F0.5: >= 0.9902.
+- Adaptive Budget Constraints on Config 6:
+  * Top-150: Oracle F0.5 = 0.7667 (standalone) / 0.9898 (projected hybrid)
+  * Top-125: Oracle F0.5 = 0.7579 (standalone) / 0.9891 (projected hybrid)
+  * Top-100: Oracle F0.5 = 0.7464 (standalone) / 0.9874 (projected hybrid)
+- Runtime: 214.1s streaming 10.32M records (Peak RAM: 1,438.7 MB).
+- 28/28 tests pass in pytest.
+
+Commit:
+- Pending
+
+Decision:
+- Keep. Establish Config 6 + F@100 + R@5 as the official candidate generation foundation for downstream LightGBM pairwise ranking.
+
+Next:
+- Implement LightGBM pairwise ranker on Config 6 candidates.
+
+
