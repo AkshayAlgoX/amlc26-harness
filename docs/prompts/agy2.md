@@ -161,3 +161,25 @@ Related commit:
 - 6279c50 (feat(retrieval): controlled retrieval ablation on 50k S1 with frequency-capped B3 and budget constraints)
 
 
+
+## [2026-09-25 05:24:11+05:30]
+
+Task:
+- Root-fix a suspected source-classification bug in the fresh-holdout retrieval pipeline.
+
+Prompt summary:
+- Verify the reported S2-166376419 → S3 misclassification by inspecting code; remove every numeric-magnitude/threshold/range/row/length heuristic for S2 vs S3; derive source only from the entity_id prefix via one helper; add tests (S2-166376419, S2-999999999, S3-1, S3-999999999 → correct source); search for duplicate logic; run only tests that do not scan the raw data; do not run the fresh holdout; commit as Akshaya R with no co-author line.
+
+Expected output:
+- Bug verdict, changed files/functions, test results, commit SHA.
+
+Actual result:
+- Bug CONFIRMED in experiments/agy2_exp4_fresh_holdout_validation.py: encode_tid stored S2 as the raw number and S3 as number+10,000,000; S2/S3 was then decided by `< 10_000_000`. Real IDs are unpadded numbers up to ~1e9 (≈99% have 8–9 digits), so nearly every S2 was counted as S3 and S2-(10,000,000+k) collided with S3-k.
+- Added src/er/ids.py (source_of, is_target_id, lossless encode_target_id/decode_target_id with an explicit prefix tag, code_source); exp4 and features.py now use it. No other magnitude heuristics found (exp2/exp3/src use prefix checks).
+- 49/49 tests pass (tests/test_er_ids.py + existing ER/metric/contract tests). Fresh holdout not run.
+
+Related experiment:
+- agy2-retrieval-004 (fresh holdout) — results produced before this fix are invalid.
+
+Related commit:
+- see contributions entry

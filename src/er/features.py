@@ -11,6 +11,8 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import numpy as np
 import pandas as pd
 
+from .ids import is_target_id, source_of
+
 
 def jaccard_similarity(set1: Set[Any], set2: Set[Any]) -> float:
     """Compute Jaccard similarity between two sets."""
@@ -164,8 +166,9 @@ class PairwiseFeatureExtractor:
 
         # Target source indicator
         cand_id = str(cand.get("entity_id", ""))
-        feats["is_source2"] = 1.0 if cand_id.startswith("S2-") else 0.0
-        feats["is_source3"] = 1.0 if cand_id.startswith("S3-") else 0.0
+        cand_src = source_of(cand_id) if is_target_id(cand_id) else ""
+        feats["is_source2"] = 1.0 if cand_src == "S2" else 0.0
+        feats["is_source3"] = 1.0 if cand_src == "S3" else 0.0
 
         # Composite features
         feats["name_x_addr_jaccard"] = t_jacc * a_jacc

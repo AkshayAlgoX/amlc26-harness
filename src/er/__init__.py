@@ -8,6 +8,7 @@ from .blocking import (
     evaluate_blocking,
 )
 from .features import PairwiseFeatureExtractor
+from .ids import code_source, decode_target_id, encode_target_id, is_target_id, source_of
 from .generation import (
     generate_candidate_pairs_tsv,
     generate_matching_results_tsv,
@@ -45,6 +46,11 @@ from .split import (
 from .validator import ValidationResult, validate_submission
 
 __all__ = [
+    "source_of",
+    "is_target_id",
+    "encode_target_id",
+    "decode_target_id",
+    "code_source",
     "load_source_tsv",
     "load_ground_truth",
     "load_train_dataset",

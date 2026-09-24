@@ -171,3 +171,30 @@ Next:
 - Implement LightGBM pairwise ranker on Config 6 candidates.
 
 
+
+## [2026-09-25 05:24:11+05:30]
+
+Task:
+- Fix S2/S3 source-classification bug (numeric-magnitude heuristic) in the fresh-holdout pipeline.
+
+Files changed:
+- src/er/ids.py (new): prefix-only source helpers + lossless tagged int encoding.
+- src/er/features.py: is_source2/is_source3 via source_of.
+- src/er/__init__.py: export helpers.
+- experiments/agy2_exp4_fresh_holdout_validation.py: removed encode_tid/decode_tid and all `10_000_000` comparisons; uses encode_target_id/code_source.
+- tests/test_er_ids.py (new): 20 cases incl. S2-166376419, S2-999999999, S3-1, S3-999999999, round-trip, old-offset collision, invalid IDs.
+
+Experiment:
+- agy2-retrieval-004 (not run).
+
+Result:
+- 49/49 tests pass (no raw-data scan). Any S2/S3 split, recall or oracle figure from exp4 computed before this commit is invalid (misclassification + ID collisions).
+
+Commit:
+- this commit (feat/fix: prefix-only source identity)
+
+Decision:
+- Keep. Re-run the fresh holdout only after captain approval.
+
+Next:
+- Captain decision on committed organiser-derived data files (data/val_s1_50k.tsv, data/val_gt_50k.tsv in 087f0b2, not pushed).
