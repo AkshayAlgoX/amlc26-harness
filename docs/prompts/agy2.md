@@ -295,3 +295,27 @@ Related experiment:
 Related commit:
 - 2458805, c0cb1fc, 874f301
 - [11:45 update] exp7 COMPLETE (exit 0, 108.05 min, 17,209 MB). H3 macro F0.5 0.923461 vs H2 0.922723 vs DEV-OOF 0.923869 -> H3 confirms H2. See contributions entry.
+
+## [2026-09-25 12:05 IST — exp8 turbo path (built by T0 in the agy2 worktree)]
+
+Task:
+- Build the reusable exp8 experimentation system (C0 normalize → C1 statistics/TF-IDF → C2 retrieval superset → C3 pruner OOF → C4 matcher features → C5 matcher OOF → C6 decision sweeps) so that only retrieval/statistics changes need a full-corpus run.
+
+Prompt summary:
+- Do not modify experiments/agy2_exp7_*.py or the frozen exp7 config; no Kaggle jobs; no H3 labels or H3 rows in development artifacts; don't modify main; don't push.
+- Content-addressed store with manifests and guards; v0 sandbox seeded from the exp6 pool; C0–C2 builder (production loader, stats exclude H2+H3, K=300 / reverse 10 / cap 1000 superset, sharded exact merge); cached pruner/matcher/decide; sealed final scorer; synthetic tests only.
+- Measure the v0 seed time and one rule sweep on cached scores; give the expected C0–C2 build time.
+
+Expected output:
+- Code + tests committed as Akshaya R (no co-author); measured v0 timings; artifact graph; what can be iterated without a corpus rerun.
+
+Actual result:
+- 8 new files (store, features, builder, seed, pruner, matcher, decide, final) + tests/test_exp8.py. Tests 72/72 (61 existing + 11 new), synthetic only.
+- exp7 parity (synthetic, the unmodified exp7 main): identical pools except rows swapped by exact score ties at a top-k boundary (exp7 orders ties arbitrarily; exp8 by score desc, id asc).
+- v0 on the real exp6 pool (local, neg-rate 0.1, 8 threads, no text features): seed 6.4 s; pruner 4.2 min; budget table 0.26 min; matcher 0.85 min; rule sweep 4.4 s for 176 evaluations (19.6 s for 736 with gates); peak RSS 5.4 GiB.
+
+Related experiment:
+- agy2-er-008 (turbo path). No Kaggle run.
+
+Related commit:
+- see the contribution entry.

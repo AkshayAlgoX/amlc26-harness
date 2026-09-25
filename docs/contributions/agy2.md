@@ -326,3 +326,27 @@ Decision:
 
 Next:
 - Matcher-stage FN (20.8k) is the bottleneck. Raise the round cap and add richer pair features, with selection on DEV only. Triage India and singletons.
+
+## [2026-09-25 12:05 IST]
+
+Task:
+- EXP8 turbo experimentation path (code + synthetic tests + local v0 timing; no Kaggle).
+
+Files changed:
+- experiments/agy2_exp8_store.py, agy2_exp8_features.py, agy2_exp8_build_snapshot.py, agy2_exp8_seed_exp6.py, agy2_exp8_pruner.py, agy2_exp8_matcher.py, agy2_exp8_decide.py, agy2_exp8_final.py; tests/test_exp8.py; docs (these entries). exp7 files untouched (code sha still matches the frozen config).
+
+Experiment:
+- agy2-er-008. Store: ~/amlc26-shared/artifacts/exp8_store (via the artifacts symlink). v0 chain: v0_seed/5bcbabbb227de073cb32 → c3_pruner/380987755f053aa840fb → c4_mfeat/aafc8d30940ba14f1afb → c5_matcher/1fa5bcfff7ee922af1fd → c6_decide/d1ee66f9c9ab461e51c9.
+
+Result:
+- Tests 72/72. Parity with exp7 up to boundary ties; sharded == single-process; query-set independence; H3 exclusion; cache invalidation; fold consistency; label-perturbation integrity; decide == src/er/metric; sealed scorer single-use.
+- v0 (exp6-legacy, pool-truth proxy, no text features, neg-rate 0.1): pruner AUC DEV 0.9980 / H2 0.9981; matcher AUC 0.9951 / 0.9953; top-80 budget = 7,999,837 pairs (same as exp6). Proxy macro F0.5 is 0.8875 on DEV and 0.8865 on H2. This is a timing/plumbing number only, not comparable to exp7's 0.9239.
+
+Commit:
+- this commit (Akshaya R, no co-author, not pushed).
+
+Decision:
+- Keep. The real C0–C2 snapshot must be built once on Kaggle before any reported number. H3 has been used by exp7; the next confirmation needs H4 (IDs only, added to the stats exclusion before the snapshot build).
+
+Next:
+- Derive H4 and add it via EXP8_SEALED_LISTS. Run the exp8 snapshot on Kaggle once (with a memory probe). Then iterate on the matcher (text features, round cap, negative rate) against the C3 cache.
