@@ -51,3 +51,11 @@ def test_s1_context_is_within_group():
     assert np.allclose(gap_n, [0, .45, .03, 0], atol=1e-6)
     assert rank.tolist() == [1, 3, 2, 1] and strong.tolist() == [2, 2, 2, 0]
     assert np.allclose(gap_a, [.8, 0, .4, 0], atol=1e-6)
+
+
+def test_h4_candidate_feature_sets():
+    from experiments.agy2_exp9_h4_freeze import candidate_features
+    assert candidate_features("B0", {}) == [] and candidate_features("B1", {}) == []
+    assert candidate_features("B2", {}) == F9.NEW_FEATURES
+    b3 = candidate_features("B3", {"dropped_group": "A"})
+    assert set(b3) == set(F9.NEW_FEATURES) - set(F9.GROUPS["A"])
