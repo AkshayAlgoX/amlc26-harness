@@ -462,7 +462,9 @@ def main():
 
     def lgb_crossfit(D, feats, prm, tag):
         """Cross-fitted LightGBM: DEV rows of folds != k train model k; all rows of fold k are scored by model k."""
-        X = D[feats].to_numpy(np.float32)
+        X = np.empty((len(D), len(feats)), dtype=np.float32)       # column-wise fill: no float64 intermediate
+        for j, f_ in enumerate(feats):
+            X[:, j] = D[f_].values
         y = D.label.values.astype(np.int8)
         es = es_q[D.q.values]
         params = dict(objective="binary", learning_rate=prm["learning_rate"], num_leaves=prm["num_leaves"],
