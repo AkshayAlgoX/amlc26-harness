@@ -374,3 +374,26 @@ Related experiment:
 
 Related commit:
 - see contributions entry
+
+## [2026-09-25 14:40 IST — H1 false-negative mining on exp7 OOF]
+
+Task:
+- Mine true links that the exp7 matcher/decision rejects; find high-precision rescue rules; decide whether retraining is justified. H1 only; no retraining first.
+
+Prompt summary:
+- Build an FN taxonomy over name/address similarity, JW, char TF-IDF, postal/street number, retrieval rank/score/channels, source, country, candidate-set size and top-score relations. Measure each rescue rule's precision and F0.5 impact on H1 OOF. List unsafe rules.
+
+Expected output:
+- Taxonomy, rescue rules with precision and dF0.5, unsafe rules, retraining verdict.
+
+Actual result:
+- Kaggle akshayalgox/amlc26-exp7-h1-dump v2 reproduced the frozen exp7 DEV OOF exactly (0.923869046; 110.2 min, 17.8 GB, tests passed). v1 had failed on an empty bundle, caused by a concurrent commit e39f70a.
+- Kaggle akshayalgox/amlc26-h1-fn-mining analysed 3,999,866 H1 pairs (aggregates only).
+- The matcher is calibrated on DEV. No rescue rule on existing or derived features has positive dF0.5; every candidate is negative in 5/5 folds.
+- Local work ran only as a capped systemd poller (400 MB, no swap, 20% CPU).
+
+Related experiment:
+- agy2-er-007-h1dump, agy2-er-007-fnmine
+
+Related commit:
+- e39f70a (contains agy2_exp7_h1dump.py; committed by a concurrent session)

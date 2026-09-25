@@ -384,3 +384,29 @@ Decision:
 Next:
 - Score H4 immediately via `agy2_exp8_final.py` once AGY1 merges R3 booster/code.
 
+
+## [2026-09-25 14:40 IST]
+
+Task:
+- H1 FN mining of the exp7 matcher (measured, H1 cross-fitted OOF only).
+
+Files changed:
+- experiments/agy2_exp7_h1dump.py (in e39f70a). Mining script kept outside the repo: ~/amlc26-kaggle-refresh/exp7/mine_kernel/fn_mine.py. Docs (this entry).
+
+Experiment:
+- Dump reproduced DEV OOF 0.923869 exactly. Matcher-stage FN = 20,768 of 166,771 true links in budget (12.45%).
+
+Result:
+- Calibration: observed precision matches mean p in every bin (e.g. 0.5495 vs 0.5541, 0.7514 vs 0.7610).
+- FN by score: 54.9% at p < 0.35, 18.7% at p in [0.5, 0.65), 9.0% at [0.65, 0.8).
+- FN clusters: target address empty (76.0% FN rate, 23.4% of FN); <= 2 retrieval channels (86.7% of FN); digits disjoint (65.2% of FN); India FN rate 14.9% vs US 10.9%; FN rate rises with cardinality (9.3% -> 14.4%); rank 4-10 holds 68.8% of FN; S2 ~ S3.
+- Best rescue rules: p >= .5 rejected pairs (precision 0.618, dF0.5 -0.00514); exact_addr & name_char >= .5 (0.595, -0.00008, 84 pairs). All 20 rules have dF0.5 <= 0 in every fold.
+
+Commit:
+- this docs commit.
+
+Decision:
+- No rescue rule ships. The decision layer is near-optimal given calibrated scores, so gains need better separation, i.e. model or feature work.
+
+Next:
+- Pre-registered retrain on DEV OOF: raise the 600-round cap (every fold hit it) and add features for the empty-target-address and number-mismatch clusters. Validate on a fresh holdout.
