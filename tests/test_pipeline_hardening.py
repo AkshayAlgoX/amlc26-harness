@@ -231,18 +231,20 @@ def test_make_kernels_builds_fail_closed_chain(tmp_path):
     sys.path.insert(0, str(ROOT / "scripts" / "kaggle"))
     import make_kernels as MK
     if not (ROOT / ".git").exists():
+        plan = json.loads((ROOT / "experiments/configs/test_shards.json").read_text())
+        total_shards = sum(plan["shards"].values())
         commit = (ROOT / "BUNDLE_COMMIT").read_text().strip()
         assert len(commit) == 40 and all(ch in "0123456789abcdef" for ch in commit), "malformed BUNDLE_COMMIT"
         assert not [p for p in ROOT.rglob("*") if p.is_symlink()], "symlink inside the exported bundle"
         cfg = json.loads((ROOT / "experiments/configs/h4_frozen.json").read_text())
         assert all(sha256_file(ROOT / m) == h for m, h in cfg["code_sha256"].items()), "pinned module mismatch in bundle"
         job = {"bundle_commit": commit, "config_sha256": sha256_file(ROOT / "experiments/configs/h4_frozen.json"),
-               "kind": "test_shards", "shards": {"country": "India", "count": 6, "indices": list(range(6))}}
-        kid = MK.kernel(tmp_path, "test_India", "amlc26-p-test-india", job, "akshayalgox/amlc26-agy2-test", ["amlc26-p-h4"])
-        meta = json.loads((tmp_path / "test_India" / "kernel-metadata.json").read_text())
-        assert kid.endswith("amlc26-p-test-india") and not meta["enable_internet"] and not meta["enable_gpu"]
-        stub = (tmp_path / "test_India" / "run.py").read_text()
-        assert '"kind": "test_shards"' in stub and '"count": 6' in stub and commit in stub
+               "kind": "test_shards", "shards": {"country": "India", "count": plan["shards"]["India"], "indices": [0]}}
+        kid = MK.kernel(tmp_path, "test_India_0", "amlc26-p-test-india-0", job, "akshayalgox/amlc26-agy2-test", ["amlc26-p-h4"])
+        meta = json.loads((tmp_path / "test_India_0" / "kernel-metadata.json").read_text())
+        assert kid.endswith("amlc26-p-test-india-0") and not meta["enable_internet"] and not meta["enable_gpu"]
+        stub = (tmp_path / "test_India_0" / "run.py").read_text()
+        assert '"kind": "test_shards"' in stub and f'"count": {plan["shards"]["India"]}' in stub and commit in stub
         return
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     if subprocess.run(["git", "cat-file", "-e", f"{head}:scripts/kaggle/kaggle_job.py"], cwd=ROOT).returncode != 0:
@@ -253,12 +255,26 @@ def test_make_kernels_builds_fail_closed_chain(tmp_path):
     assert (stage / "BUNDLE_COMMIT").read_text().strip() == head
     assert not [p for p in stage.rglob("*") if p.is_symlink()], "symlink exported into the bundle"
     assert (stage / "experiments/configs/h4_frozen.json").is_file() and not (stage / "artifacts").exists()
+    # read the plan from the archived bundle — that is what make_kernels.py actually used
+    plan = json.loads((stage / "experiments/configs/test_shards.json").read_text())
+    total_shards = sum(plan["shards"].values())
     metas = {d.name: json.loads((d / "kernel-metadata.json").read_text()) for d in tmp_path.iterdir() if (d / "run.py").is_file()}
-    assert set(metas) == {"h4", "test_US", "test_India", "test_France", "merge"}
+    # expect h4 + one per shard + merge
+    expected_dirs = {"h4", "merge"}
+    for c, n in plan["shards"].items():
+        for i in range(n):
+            expected_dirs.add(f"test_{c}_{i}")
+    assert set(metas) == expected_dirs, f"expected {sorted(expected_dirs)}, got {sorted(metas)}"
     assert all(not m["enable_internet"] and not m["enable_gpu"] for m in metas.values())
-    assert metas["merge"]["kernel_sources"][0].endswith("amlc26-p-h4") and len(metas["merge"]["kernel_sources"]) == 4
-    stub = (tmp_path / "test_India" / "run.py").read_text()
-    assert '"kind": "test_shards"' in stub and '"count": 6' in stub and head in stub
+    # merge sources: h4 + all test kernels
+    assert metas["merge"]["kernel_sources"][0].endswith("amlc26-p-h4")
+    assert len(metas["merge"]["kernel_sources"]) == 1 + total_shards
+    # Kaggle hard limit: merge has 2 dataset_sources + (1 + total_shards) kernel_sources <= 20
+    assert 2 + 1 + total_shards <= 20, f"merge would need {2 + 1 + total_shards} sources (max 20)"
+    # validate a sample shard stub
+    stub = (tmp_path / "test_India_0" / "run.py").read_text()
+    assert '"kind": "test_shards"' in stub and f'"count": {plan["shards"]["India"]}' in stub and head in stub
+    assert '"indices": [0]' in stub
 
 
 def test_extra_train_gate_and_disjoint_draw(tmp_path):

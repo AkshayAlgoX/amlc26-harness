@@ -1,7 +1,7 @@
 """Generate (never push) the Kaggle kernel directories for one exact code commit.
 
 usage: python scripts/kaggle/make_kernels.py --commit <sha> --bundle-slug akshayalgox/<code-dataset> --out <dir>
-Writes <out>/{bundle_stage,h4,test_US,test_India,test_France,merge}. bundle_stage = `git archive <commit>` without any
+Writes <out>/{bundle_stage,h4,test_<country>_<i>,...,merge}. bundle_stage = `git archive <commit>` without any
 symlink / hard-link member (never followed, never exported) + BUNDLE_COMMIT
 + dataset-metadata.json. Each kernel dir = a stub run.py (locates the bundle under /kaggle/input/datasets, copies it,
 executes scripts/kaggle/kaggle_job.py with the embedded job) + kernel-metadata.json (CPU, internet off, private).
@@ -81,11 +81,16 @@ def main():
     ids = {"h4": kernel(out, "h4", "amlc26-p-h4", {**base, "kind": "h4"}, a.bundle_slug, [])}
     tests = []
     for c, n in plan["shards"].items():
-        t = f"amlc26-p-test-{c.lower()}"
-        kernel(out, f"test_{c}", t, {**base, "kind": "test_shards", "shards": {"country": c, "count": n, "indices": list(range(n))}},
-               a.bundle_slug, ["amlc26-p-h4"])
-        tests.append(t)
-    kernel(out, "merge", "amlc26-p-merge", {**base, "kind": "merge"}, a.bundle_slug, ["amlc26-p-h4"] + tests)
+        for i in range(n):
+            t = f"amlc26-p-test-{c.lower()}-{i}"
+            kernel(out, f"test_{c}_{i}", t, {**base, "kind": "test_shards", "shards": {"country": c, "count": n, "indices": [i]}},
+                   a.bundle_slug, ["amlc26-p-h4"])
+            tests.append(t)
+    merge_sources = ["amlc26-p-h4"] + tests
+    # Kaggle hard limit: 20 dataset + kernel sources per notebook.  Merge has 2 dataset_sources + len(merge_sources) kernel_sources.
+    if 2 + len(merge_sources) > 20:
+        import sys; sys.exit(f"FAIL-CLOSED: merge kernel would need {2 + len(merge_sources)} sources (max 20)")
+    kernel(out, "merge", "amlc26-p-merge", {**base, "kind": "merge"}, a.bundle_slug, merge_sources)
     print(json.dumps({"commit": commit, "config_sha256": cfg_sha, "skipped_links": skipped,
                       "kernels": ["amlc26-p-h4"] + tests + ["amlc26-p-merge"]}))
 
