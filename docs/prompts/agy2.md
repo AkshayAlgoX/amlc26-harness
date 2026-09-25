@@ -268,3 +268,30 @@ Related experiment:
 
 Related commit:
 - e27a582
+
+## [2026-09-25 IST — exp7 validation integrity + H3]
+
+Task:
+- Root-fix the EXP6 audit issues and score a truly untouched H3 holdout on Kaggle.
+
+Prompt summary:
+- A: one canonical TSV reader (parity with src/er/loader.py on all 7 files, contract test on quoted rows).
+- B: pruner and matcher cross-fitted on one shared S1 fold assignment.
+- C: no calibration applied across different prediction distributions.
+- D/E: new SHA-256 H3 disjoint from all previous lists; configuration frozen in JSON before scoring; one budget pre-registered.
+- F: fixed H3 report and H2 comparison. No H3 tuning, no dense retrieval, no new channels.
+
+Expected output:
+- H3 report (retrieval recall, pruner oracle at the fixed budget, matcher macro F0.5, P/R, singleton, S2/S3, US/India, cardinality, FN by stage, candidate stats, runtime, RAM) + H2 confirm/contradict verdict.
+
+Actual result:
+- Code 2458805 + c0cb1fc; frozen config 874f301 (experiments/configs/exp7_h3_frozen.json, sha256 2cbc44f3...). Tests 61/61.
+- Prep kernel akshayalgox/amlc26-exp7-prep: contract reader == production loader on all 7 files. Legacy plain split differed on 10 train rows (addresses) and 813 test rows (mostly names). H3 = 50,000 IDs (salt amlc26-h3-holdout-v1, sha256 6317c82c...), 0 overlap with H0/H1/H2.
+- Main kernel akshayalgox/amlc26-exp7-h3 v1 pushed; results pending.
+
+Related experiment:
+- agy2-er-007-h3
+
+Related commit:
+- 2458805, c0cb1fc, 874f301
+- [11:45 update] exp7 COMPLETE (exit 0, 108.05 min, 17,209 MB). H3 macro F0.5 0.923461 vs H2 0.922723 vs DEV-OOF 0.923869 -> H3 confirms H2. See contributions entry.

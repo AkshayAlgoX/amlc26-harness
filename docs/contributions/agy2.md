@@ -298,3 +298,31 @@ Decision:
 
 Next:
 - Stronger pair features (cross-encoder / richer name-address alignment), extended singleton gate grid (0.5 was the edge), card-1 and India error triage.
+
+## [2026-09-25 11:45 IST]
+
+Task:
+- EXP7: validation-integrity fixes + untouched H3 holdout (Kaggle, measured).
+
+Files changed:
+- experiments/agy2_exp7_h3.py, agy2_exp7_prep_h3.py, agy2_exp7_freeze.py, experiments/configs/exp7_h3_frozen.json, tests/test_exp7.py (2458805, c0cb1fc, 874f301); docs (this entry).
+
+Experiment:
+- agy2-er-007-h3. DEV = H1 (all fitting/selection, cross-fitted OOF); H2 and H3 evaluation only, scored identically. Frozen config sha256 2cbc44f3...; code sha256 384023114f4e... verified in-run; Kaggle repo tests passed (exit 0).
+- Kernel akshayalgox/amlc26-exp7-h3 v1: COMPLETE, exit 0, 108.05 min wall, child peak RSS 17,209 MB. Artifacts: ~/amlc26-kaggle-refresh/exp7/run_out/exp7/.
+
+Result (DEV-OOF / H2 / H3):
+- Retrieval recall 96.673% / 96.592% / 96.568%. Pruned@80 oracle 0.988030 / 0.987249 / 0.987496.
+- Matcher macro F0.5 0.923869 / 0.922723 / 0.923461. Precision 0.9736 / 0.9747 / 0.9741; recall 0.8457 / 0.8441 / 0.8447.
+- H3 singletons 0.8541, US 0.9440, India 0.8927. H3 FN: retrieval 5,920, pruning 114, matching 20,761.
+- Frozen rule chosen on DEV: expF (m 0.1173, s 0.5) with greedy conflicts.
+
+Commit:
+- code/config above + this docs commit.
+
+Decision:
+- H3 confirms H2 (|diff| < 0.001 macro F0.5). Credible generalisation estimate for this pipeline ≈ 0.923. The earlier 0.9248 (exp6) is superseded.
+- Pruner and matcher both hit the 600-round cap (best_iter 586-600), so there is headroom.
+
+Next:
+- Matcher-stage FN (20.8k) is the bottleneck. Raise the round cap and add richer pair features, with selection on DEV only. Triage India and singletons.
