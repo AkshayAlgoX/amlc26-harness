@@ -397,3 +397,24 @@ Related experiment:
 
 Related commit:
 - e39f70a (contains agy2_exp7_h1dump.py; committed by a concurrent session)
+
+## [2026-09-25 16:00 IST — EXP9 retrain + Romanization integration review]
+
+Task:
+- Complete the pre-registered EXP9 retrain, then review whether the Romanization retrieval lanes (TEST B/C) can be scored downstream using existing artifacts.
+
+Prompt summary:
+- Speed-first retrain from cached H1 (B0/B1/B2/B3). Separately, a read-only review of the Romanization result: reuse of exp7/exp9 artifacts, fastest safe downstream measurement, no new expensive job, no H4 tuning.
+
+Expected output:
+- Ranked variant table + H4 candidate; PROVEN / CRITICAL RISK / FASTEST NEXT / ARTIFACTS for Romanization.
+
+Actual result:
+- EXP9 B2 0.939414 vs B0 0.923869 (see contributions).
+- Romanization run saved only aggregate JSON (no pair lists), so its lanes cannot be scored by exp7/exp9 artifacts without regenerating the lane pairs.
+
+Related experiment:
+- agy2-er-009, romanization benchmark (concurrent session, untracked code)
+
+Related commit:
+- df2091d, 9a44e20

@@ -410,3 +410,33 @@ Decision:
 
 Next:
 - Pre-registered retrain on DEV OOF: raise the 600-round cap (every fold hit it) and add features for the empty-target-address and number-mismatch clusters. Validate on a fresh holdout.
+
+## [2026-09-25 16:00 IST]
+
+Task:
+- EXP9 pre-registered matcher retrain from the immutable exp7 H1 cache (Kaggle, measured, H1 cross-fitted OOF only).
+
+Files changed:
+- experiments/agy2_exp9_features.py, agy2_exp9_retrain.py, configs/exp9_prereg.json, tests/test_exp9.py (df2091d)
+- experiments/agy2_exp9_h4_eval.py, agy2_exp9_h4_freeze.py, docs/EXP9_H4_AND_SUBMISSION_PLAN.md (9a44e20; prepared, H4 not run)
+
+Experiment:
+- Kaggle akshayalgox/amlc26-exp9-matcher-retrain v1: exit 0, tests passed, 63.9 min, peak 4.05 GB.
+- Store nodes: v0_seed/1a7552795db00759c5a3, c0_norm/cc0a80a430748304a572, c4_mfeat/2c90dbae0e6de94b189e, plus c5 per variant.
+- No retrieval, pruning or exp7 feature recomputation.
+
+Result (macro F0.5, H1 OOF):
+- B0 0.923869 (reproduces cached exp7; max |dp| 3e-8).
+- B1 (cap 1000) 0.924380 (+0.00051, 5/5 folds).
+- B2 (+18 features) 0.939414 (+0.01554, 5/5 folds, every category up; FP 3,953 -> 3,224; rejected true links 20,768 -> 15,291).
+- B3 (B2 minus group A) 0.929698.
+- Pre-registered pick: B2.
+
+Commit:
+- df2091d, 9a44e20 + this docs commit.
+
+Decision:
+- B2 is the H4 candidate. H4 has not been run and awaits operator approval.
+
+Next:
+- Operator approval for the H4 freeze and run. The Romanization lane needs pair persistence and refitted statistics before a downstream test.
