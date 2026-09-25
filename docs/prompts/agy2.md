@@ -225,3 +225,25 @@ Related experiment:
 
 Related commit:
 - see contributions entry
+
+## [2026-09-25 06:24:00+05:30]
+
+Task:
+- Execute exp5 (corrected fresh-hash holdout retrieval validation) end-to-end on Kaggle and return verified results.
+
+Prompt summary:
+- Verify bundle; create private code dataset; private CPU script kernel with official data + code bundle; REVERSE_MODE=full with no fallback; capture outputs; validity checks; report BASELINE/BASE100/PROPOSED; decide freeze against oracle >= 0.990, mean <= 80, p99 <= 250. No LightGBM.
+
+Expected output:
+- Measured results + decision.
+
+Actual result:
+- Kaggle dataset akshayalgox/amlc26-agy2-exp5 (private) + kernel akshayalgox/amlc26-exp5-corrected-holdout (private, CPU, no internet). COMPLETE, exit 0, 32.2 min, child peak RSS 7,560 MB.
+- PROPOSED: recall 96.159%, oracle 0.985883, mean 216.7 / p99 1,947 cands per S1 -> FAILS oracle and budget. BASELINE: 94.870% / 0.980957 / 215.5 / p99 438. BASE100: 93.819% / 0.976823 / 118.2 / p99 359.
+- Artifacts saved locally: ~/amlc26-kaggle-refresh/exp5/run/output/exp5/ (stdout.log, exp5_results.json, holdout_s1.ids, run_summary.json).
+
+Related experiment:
+- agy2-retrieval-005
+
+Related commit:
+- see contributions entry

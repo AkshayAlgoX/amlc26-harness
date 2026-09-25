@@ -244,3 +244,30 @@ Decision:
 
 Next:
 - Captain runs the Kaggle cell; results reviewed before any retrieval freeze or LightGBM work.
+
+## [2026-09-25 06:24:00+05:30]
+
+Task:
+- exp5 Kaggle execution (measured).
+
+Files changed:
+- docs only (this entry). Code unchanged since 4826d38.
+
+Experiment:
+- agy2-retrieval-005 on fresh 50k holdout (salt amlc26-exp5-holdout-v1; 0 overlap with both prior samples; 173,103 true links).
+
+Result:
+- BASELINE A+B+F@200+R@5: recall 94.8695%, S2 95.681%, S3 94.109%, oracle 0.980957, mean 215.5, p99 438, missed 8,881.
+- BASE100 A+B+F@100+R@5: 93.8187%, oracle 0.976823, mean 118.2, p99 359, missed 10,700.
+- PROPOSED: 96.1589%, oracle 0.985883, mean 216.7, p50 114, p95 374, p99 1,947, max 13,581, missed 6,649. US oracle 0.993663, India 0.974380.
+- Leave-one-out marginals: B3 +1.023% / +0.00388 oracle / +8.1 cands; B2 +0.486% / +0.00213 / +9.8; B4 +0.121% / +0.00040 / +0.0; Reverse@5 +0.108% / +0.00043 / +9.9; Canon +0.015% / +0.00006 / +79.0.
+- Standalone R@5 = 71.38% (earlier holdout-only reverse numbers ~93.6% were inflated).
+
+Commit:
+- this commit (docs only)
+
+Decision:
+- Retrieval NOT frozen: PROPOSED fails oracle >= 0.990 and budget (mean <= 80, p99 <= 250).
+
+Next:
+- Drop Canon view, cap reverse hits per S1 and A buckets, then India residual triage; first-stage pruner to reach the budget.
