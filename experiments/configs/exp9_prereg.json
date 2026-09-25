@@ -1,0 +1,34 @@
+{
+  "experiment": "agy2-er-009-matcher-retrain",
+  "status": "pre-registered before any exp9 model was trained",
+  "base": {
+    "frozen_config": "experiments/configs/exp7_h3_frozen.json",
+    "cache": "Kaggle kernel output akshayalgox/amlc26-exp7-h1-dump (version 2): h1_matcher_oof.parquet, h1_queries.parquet, h1_truth.parquet",
+    "expected_rows": 3999866,
+    "expected_selected": 149956,
+    "expected_dev_oof_macro_f05": 0.923869046,
+    "rebuilt": "nothing upstream of the matcher: retrieval, TF-IDF, candidate pool, parsing, pruner and exp7 pair features all come from the cache"
+  },
+  "folds": "exp7 folds (salt amlc26-exp7-fold-v1, 5 folds) and exp7 early-stopping subset, recomputed from s1_id and asserted equal to the cached fold column",
+  "row_order": "exp7 matcher row order = sort by (q, prune_rank); B0 must reproduce the cached OOF p (max abs diff reported)",
+  "lightgbm": {"learning_rate": 0.08, "num_leaves": 63, "min_data_in_leaf": 100, "feature_fraction": 0.9,
+               "bagging_fraction": 0.8, "bagging_freq": 1, "lambda_l2": 1.0, "max_bin": 127, "seed": 42,
+               "early_stopping": 50, "num_threads": "os.cpu_count() (4 on Kaggle CPU, as in exp7)"},
+  "variants": {
+    "B0": {"features": "exp7 matcher features (43)", "max_rounds": 600, "purpose": "exact reproduction from cache"},
+    "B1": {"features": "exp7 matcher features (43)", "max_rounds": 1000, "purpose": "round cap only (exp7 hit 600 in every fold)"},
+    "B2": {"features": "exp7 + groups A,B,C,E (18 new)", "max_rounds": 1000, "purpose": "evidence-driven features"},
+    "B3": {"features": "B2 minus the new group with the largest total split gain in B2", "max_rounds": 1000,
+           "run_if": "B2 macro F0.5 > B1 in >= 4 of 5 folds", "purpose": "dependence on the strongest group"}
+  },
+  "round_cap_policy": "1000 is fixed; it is not re-tuned after seeing results",
+  "decision_rule": "exp7 family and grids (thr, topn, gap, expF) x {unconstrained, greedy}, selected per variant on DEV cross-fitted OOF only",
+  "acceptance_vs_B0": {
+    "min_folds_improved": 4,
+    "max_drop_any_category": 0.002,
+    "categories": ["singleton", "card1", "card2_5", "card6p", "US", "India"],
+    "note": "a variant is not preferred for its H1 mean alone"
+  },
+  "ranking": "largest mean macro F0.5 gain among accepted variants; if within 0.0005 of the next, prefer fewer features",
+  "holdouts": "H2, H3 and H4 are not read. H4 is sealed in the store (EXP8_SEALED_LISTS)."
+}
