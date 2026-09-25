@@ -204,3 +204,24 @@ Related experiment:
 
 Related commit:
 - see contributions entry
+
+## [2026-09-25 05:38:34+05:30]
+
+Task:
+- Prepare the corrected fresh-hash 50k holdout retrieval experiment for Kaggle (captain instruction).
+
+Prompt summary:
+- Verify prefix-only S2/S3 identity; measure BASELINE (A+B+F@200+R@5) vs PROPOSED (A+B+F@100+R@5+B2+freq-controlled B3+B4+non-destructive canon view) with exact unique unions, S2/S3 recall, oracle F0.5, budget stats, US/India/empty-address/cardinality subgroups, missed links and marginals; reverse over ALL train S1; canon mined outside holdout; no LightGBM, no dense, no laptop-wide run.
+
+Expected output:
+- Kaggle-ready script + cell; measured results after the Kaggle run.
+
+Actual result:
+- exp4 audit: besides the fixed ID bug it cannot produce valid numbers (reverse ranked only against the holdout; "baseline" was F@100; TF-IDF fitted on holdout only; B3 "rare" = longest tokens, capped by holdout-side counts; marginals not leave-one-out). Marked SUPERSEDED.
+- Wrote experiments/agy2_exp5_corrected_holdout.py (Kaggle-first, env-configurable) + tests/test_exp5.py. Smoke-tested on tiny synthetic data only (invariants pass). 52/52 tests pass. Not run on real data.
+
+Related experiment:
+- agy2-retrieval-005 (pending Kaggle execution)
+
+Related commit:
+- see contributions entry

@@ -221,3 +221,26 @@ Decision:
 
 Next:
 - Captain: push ein/agy2 when ready (normal push; origin/ein/agy2 is an ancestor, no force needed).
+
+## [2026-09-25 05:38:34+05:30]
+
+Task:
+- Corrected fresh-holdout retrieval experiment (exp5), Kaggle-ready.
+
+Files changed:
+- experiments/agy2_exp5_corrected_holdout.py (new), tests/test_exp5.py (new), experiments/agy2_exp4_fresh_holdout_validation.py (SUPERSEDED note only).
+
+Experiment:
+- agy2-retrieval-005 — not yet executed on real data.
+
+Result:
+- Synthetic smoke: runs end-to-end in full and truth_only reverse modes; invariants hold. 52/52 repo tests pass. No metrics exist yet; exp4 and earlier reverse-retrieval numbers must not be reused.
+
+Commit:
+- this commit
+
+Decision:
+- Keep. Execute on Kaggle via the dataset bundle + cell.
+
+Next:
+- Captain runs the Kaggle cell; results reviewed before any retrieval freeze or LightGBM work.

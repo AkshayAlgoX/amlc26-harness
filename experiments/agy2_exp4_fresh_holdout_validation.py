@@ -1,5 +1,9 @@
 """AMLC26 Experiment 4: Fresh Holdout Retrieval Validation (Low-Memory Optimized).
 
+SUPERSEDED — results from this script are INVALID: reverse retrieval ranked targets only against the holdout
+(not all train S1), the "baseline" was F@100, TF-IDF was fitted on the holdout only, and B3 was capped with
+holdout-side counts. Use experiments/agy2_exp5_corrected_holdout.py. Normalisation helpers here are reused by exp5.
+
 Executes a fresh deterministic hash-based 50k S1 holdout validation:
   1. Holdout S1 entities: 50,000 sampled via stable SHA-256 hash, disjoint from previous sample.
   2. Ground Truth links: 173,064 true links (83,546 S2, 89,518 S3).
