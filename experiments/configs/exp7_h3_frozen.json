@@ -1,0 +1,233 @@
+{
+  "experiment": "agy2-er-007-h3",
+  "code_sha256": {
+    "experiments/agy2_exp7_h3.py": "384023114f4eaf230ae078a43ee85f8be9cbb9ca5018f410180b2e7eff6798ba"
+  },
+  "seed": 42,
+  "groups": {
+    "dev": {
+      "file": "exclude_ids/prev_val_s1_50k.ids",
+      "sha256": "4fe40197c714b7f960eb674f3098174f5acb244ad4d9444a7ea1c2ff1286b886",
+      "n": 50000
+    },
+    "h2": {
+      "file": "expected/exp5_holdout_s1.ids",
+      "sha256": "90312d02c15c90bac5a313f679a876b67571a9ed709931cf1123131f894d7e50",
+      "n": 50000
+    },
+    "h3": {
+      "file": "expected/h3_s1.ids",
+      "sha256": "6317c82c458921419973581151af58dc47181085eee2dd2ab6ac845b8d5d9d1d",
+      "n": 50000
+    }
+  },
+  "roles": {
+    "dev": "H1 previous 50k: ALL fitting and selection (cross-fitted OOF)",
+    "h2": "exp5 holdout: evaluation only (comparison; used for retrieval design before exp7)",
+    "h3": "new untouched holdout: evaluation only"
+  },
+  "h2_salt": "amlc26-exp5-holdout-v1",
+  "h3": {
+    "salt": "amlc26-h3-holdout-v1",
+    "n": 50000,
+    "method": "sort train S1 ids by sha256(salt|id); take first n after excluding H0 u H1 u H2",
+    "prior_list_files": {
+      "H0": "exclude_ids/prev_val_s1_holdout_50k.ids",
+      "H1": "exclude_ids/prev_val_s1_50k.ids",
+      "H2": "expected/exp5_holdout_s1.ids"
+    }
+  },
+  "text_statistics": "TF-IDF vocabulary/IDF, address-token DF and reverse DF mask fitted on train S1 excluding H2 and H3",
+  "parser": "src/er/loader.py load_source_tsv / load_ground_truth_df (single canonical reader)",
+  "retrieval": {
+    "pool_channels": [
+      "A",
+      "B",
+      "F200",
+      "R5",
+      "B2C",
+      "B3C",
+      "B4C"
+    ],
+    "max_df": 0.05,
+    "rev_df_cap": 2000,
+    "k_fwd": 200,
+    "chunk": 20000,
+    "cap": 200,
+    "fwd_min_sim": 0.05,
+    "canonical_view": false
+  },
+  "folds": {
+    "salt": "amlc26-exp7-fold-v1",
+    "nfold": 5,
+    "shared_by": [
+      "pruner",
+      "matcher"
+    ],
+    "evaluation_scoring": "each eval S1 scored by the single pruner_k -> matcher_k chain of its own fold"
+  },
+  "pruner": {
+    "features": [
+      "fwd_tfidf",
+      "fwd_rank",
+      "rev_tfidf",
+      "rev_rank",
+      "num_channels",
+      "flag_A",
+      "flag_B",
+      "flag_F100",
+      "flag_R1",
+      "flag_R5",
+      "flag_b2",
+      "flag_b3",
+      "flag_b4",
+      "exact_name",
+      "exact_addr",
+      "country",
+      "src_s3",
+      "name_jacc",
+      "name_cont",
+      "addr_jacc",
+      "digit_jacc",
+      "num_match",
+      "pin_match",
+      "q_addr_missing",
+      "t_addr_missing",
+      "name_len_diff",
+      "cands_s1",
+      "fwd_ratio_best",
+      "name_jacc_rank"
+    ],
+    "learning_rate": 0.08,
+    "num_leaves": 63,
+    "min_data_in_leaf": 100,
+    "feature_fraction": 0.9,
+    "bagging_fraction": 0.8,
+    "lambda_l2": 1.0,
+    "max_bin": 127,
+    "max_rounds": 600,
+    "early_stopping": 50
+  },
+  "budget": {
+    "top_n": 80,
+    "floor": 0.0,
+    "justification": "pre-registered from exp6: max train-OOF oracle with mean<=80 and p99<=250 on H1 selected top80; H2 showed top40/80/120 matcher F0.5 within 0.0004; no budget is chosen on H2 or H3"
+  },
+  "matcher": {
+    "features": [
+      "fwd_tfidf",
+      "fwd_rank",
+      "rev_tfidf",
+      "rev_rank",
+      "num_channels",
+      "flag_A",
+      "flag_B",
+      "flag_F100",
+      "flag_R1",
+      "flag_R5",
+      "flag_b2",
+      "flag_b3",
+      "flag_b4",
+      "exact_name",
+      "exact_addr",
+      "country",
+      "src_s3",
+      "name_jacc",
+      "name_cont",
+      "addr_jacc",
+      "digit_jacc",
+      "num_match",
+      "pin_match",
+      "q_addr_missing",
+      "t_addr_missing",
+      "name_len_diff",
+      "cands_s1",
+      "fwd_ratio_best",
+      "name_jacc_rank",
+      "prune_p",
+      "prune_rank",
+      "name_jw",
+      "addr_jw",
+      "name_cont_q",
+      "name_cont_t",
+      "name_len_ratio",
+      "tok_count_diff",
+      "addr_cont",
+      "exact_both",
+      "strong_n_strong_a",
+      "strong_n_weak_a",
+      "weak_n_strong_a",
+      "name_x_addr"
+    ],
+    "learning_rate": 0.08,
+    "num_leaves": 63,
+    "min_data_in_leaf": 100,
+    "feature_fraction": 0.9,
+    "bagging_fraction": 0.8,
+    "lambda_l2": 1.0,
+    "max_bin": 127,
+    "max_rounds": 600,
+    "early_stopping": 50
+  },
+  "calibration": "none (set rules on raw cross-fitted scores)",
+  "set_rules": {
+    "selection": "max DEV cross-fitted OOF macro F0.5 over rule x params x {unconstrained, greedy}",
+    "thr_t": [
+      0.2,
+      0.25,
+      0.3,
+      0.35,
+      0.4,
+      0.45,
+      0.5,
+      0.55,
+      0.6,
+      0.65,
+      0.7,
+      0.75,
+      0.8,
+      0.85
+    ],
+    "topn_n": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      11
+    ],
+    "topn_t": [
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6
+    ],
+    "gap_t": [
+      0.2,
+      0.3,
+      0.4,
+      0.5
+    ],
+    "gap_g": [
+      0.3,
+      0.5,
+      0.7,
+      0.85
+    ],
+    "expF_s": [
+      0.0,
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8
+    ],
+    "expF_m": "{0, DEV mean unseen links per S1}"
+  }
+}
