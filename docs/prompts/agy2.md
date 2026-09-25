@@ -319,3 +319,58 @@ Related experiment:
 
 Related commit:
 - see the contribution entry.
+
+## [2026-09-25 IST — adversarial review of EXP9 R3 set rule]
+
+Task:
+- Review whether R3 (p >= max(0.5, top1 - 0.2)) is a principled set decision or H1-specific.
+
+Prompt summary:
+- Check gap-rule collapse, high-cardinality FPs, singleton handling, source/country/cardinality bias, score comparability, calibration need, falsification tests. No retraining, no H4 parameter selection.
+
+Expected output:
+- PROVEN / LIKELY / UNKNOWN + the single H4 failure mode to watch.
+
+Actual result:
+- Read-only diagnostics on DEV (H1) cross-fitted OOF scores from exp8 c5_matcher/1fa5bcfff7ee922af1fd (script in the session scratchpad; aggregates only; no H2/H3/H4 labels).
+- The EXP9 "old gap" baseline is a top-1-only rule, not EXP7's rule, and empties 81.6% of S1 with >= 2 true links.
+- R3 vs expF (EXP7 family): -0.00369 macro F0.5 (95% CI -0.00434..-0.00312), lower in 5/5 folds. R3 vs thr0.6: -0.0002 (CI spans 0).
+- Scores are approximately calibrated and comparable across top1 bucket, country and source.
+
+Related experiment:
+- exp9 (agy1 scratch), exp8 store
+
+Related commit:
+- none (no code change)
+
+## [2026-09-25 12:15 IST — prepare fresh H4 for unbiased validation]
+
+Task:
+- Prepare completely fresh H4 holdout and frozen R3/retrieval parameters for unbiased validation of the new R3 decision layer.
+
+Prompt summary:
+- Create H4 S1 ID list + SHA-256 hash ONLY.
+- H4 must be strictly disjoint from H0/H1/H2/H3; no labels/ground truth used for selecting parameters.
+- Build/reuse EXP8 artifact graph (C0 normalize, C1 stats/IDF, C2 retrieval superset, C3 pruner OOF, C4 matcher features, C5 matcher OOF, C6 decisions).
+- Use corrected production parser and prefix-only ID handling (S1-, S2-, S3-); remove all numeric thresholds.
+- Freeze retrieval settings: K_FWD=300, K_REV=10, CAP=1000, exact shard merge.
+- R3 parameters proposed by EXP9: floor=0.5, margin=0.2. Do not tune H4 based on labels.
+- Guard against H4 overlap, leakage, old ID bug, inconsistent parser.
+- Report exact commands/files and readiness; do not run expensive full scoring until AGY1's R3 implementation is merged.
+
+Expected output:
+- `expected/h4_s1.ids`, SHA-256 hash, disjointness proof, R3 implementation in `experiments/agy2_exp8_decide.py`, test suite, prep report.
+
+Actual result:
+- Generated `expected/h4_s1.ids` (50,000 S1 IDs, salt `amlc26-h4-holdout-v1`, SHA-256 `237a24bb646ac3dd790c01718bf9f1c5226ecdcffec4cfa65b9d169a37ea3a0a`).
+- Verified 0 overlap with H0, H1, H2, and H3 (200k excluded union; total 250k pairwise disjoint S1 IDs across all 5 holdouts).
+- Integrated `r3` / `dynamic_margin` rule in `experiments/agy2_exp8_decide.py` (`(p >= floor) & (p >= self.mx - margin)`).
+- Created `experiments/agy2_exp8_prep_h4.py` and `tests/test_h4_r3.py`.
+- 82/82 tests pass in pytest.
+- Readiness verified: H4 is sealed in store exclusions, ready for scoring when AGY1's model artifacts/booster are merged.
+
+Related experiment:
+- agy2-er-008 / exp9
+
+Related commit:
+- see contributions entry

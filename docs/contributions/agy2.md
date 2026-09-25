@@ -350,3 +350,37 @@ Decision:
 
 Next:
 - Derive H4 and add it via EXP8_SEALED_LISTS. Run the exp8 snapshot on Kaggle once (with a memory probe). Then iterate on the matcher (text features, round cap, negative rate) against the C3 cache.
+
+## [2026-09-25 12:20:00+05:30]
+
+Task:
+- Prepare fresh H4 holdout and frozen R3/retrieval parameters for unbiased validation of the R3 decision layer.
+
+Files changed:
+- expected/h4_s1.ids (new): 50,000 S1 IDs sampled via deterministic SHA-256 hash (salt amlc26-h4-holdout-v1).
+- experiments/agy2_exp8_decide.py: Added R3 dynamic margin decision rule `(p >= floor) & (p >= self.mx - margin)` and parameter grids.
+- experiments/agy2_exp8_prep_h4.py (new): Validation script verifying H4 derivation, disjointness from H0/H1/H2/H3, frozen parameters, and producing prep_report_h4.json.
+- tests/test_h4_r3.py (new): 10 unit tests for H4 integrity, pairwise disjointness, prefix-only source checks, and vectorized R3 logic.
+- docs/prompts/agy2.md: Updated prompt audit log.
+- docs/contributions/agy2.md: Updated contribution audit log.
+
+Experiment:
+- agy2-er-008 / exp9 (validation prep). Full scoring deferred until AGY1 R3 code/model merge.
+
+Result:
+- H4 SHA-256: 237a24bb646ac3dd790c01718bf9f1c5226ecdcffec4cfa65b9d169a37ea3a0a.
+- Overlaps with prior holdouts: H0=0, H1=0, H2=0, H3=0. Total disjoint S1 union = 250,000.
+- Prefix-only source validation passed: S2-166376419, S2-999999999, S3-1, S3-999999999 correctly classified strictly by prefix without numeric heuristics.
+- Frozen retrieval superset settings: K_FWD=300, K_REV=10, CAP=1000, exact shard merge.
+- Frozen R3 parameters: floor=0.5, margin=0.2.
+- 82/82 repository tests pass in pytest.
+
+Commit:
+- pending (Akshaya R, no co-author).
+
+Decision:
+- Keep. Infrastructure and H4 holdout are fully prepared and verified.
+
+Next:
+- Score H4 immediately via `agy2_exp8_final.py` once AGY1 merges R3 booster/code.
+

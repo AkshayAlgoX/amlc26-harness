@@ -83,6 +83,10 @@ class Group:
                 kstar = np.repeat(np.minimum.reduceat(kst, self.st), self.ln)
                 self._ef_cache[m] = (r <= kstar) & (best > self.e0)
             sel = self._ef_cache[m].copy()
+        elif rule in ("r3", "dynamic_margin"):
+            floor = prm.get("floor", prm.get("th", 0.5))
+            margin = prm.get("margin", 0.2)
+            sel = (p >= floor) & (p >= self.mx - margin)
         else:
             raise ValueError(rule)
         s = prm.get("s", 0.0)
@@ -106,12 +110,14 @@ class Group:
 
 def grids(rules_cfg, m_dev, gates):
     R = rules_cfg
-    g = {"thr": [{"t": t} for t in R["thr_t"]],
-         "topn": [{"n": n, "t": t} for n in R["topn_n"] for t in R["topn_t"]],
-         "gap": [{"t": t, "g": g2} for t in R["gap_t"] for g2 in R["gap_g"]],
-         "expF": [{"m": mm, "s": s} for mm in (0.0, m_dev) for s in R["expF_s"]]}
-    for rule in ("thr", "topn", "gap"):
-        g[rule] = [{**prm, "s": s} for prm in g[rule] for s in gates]
+    g = {"thr": [{"t": t} for t in R.get("thr_t", [])],
+         "topn": [{"n": n, "t": t} for n in R.get("topn_n", []) for t in R.get("topn_t", [])],
+         "gap": [{"t": t, "g": g2} for t in R.get("gap_t", []) for g2 in R.get("gap_g", [])],
+         "expF": [{"m": mm, "s": s} for mm in (0.0, m_dev) for s in R.get("expF_s", [])],
+         "r3": [{"floor": fl, "margin": mg} for fl in R.get("r3_floor", [0.4, 0.45, 0.5, 0.55, 0.6]) for mg in R.get("r3_margin", [0.05, 0.1, 0.15, 0.2, 0.25])]}
+    for rule in ("thr", "topn", "gap", "r3"):
+        if rule in g:
+            g[rule] = [{**prm, "s": s} for prm in g[rule] for s in gates]
     return g
 
 
