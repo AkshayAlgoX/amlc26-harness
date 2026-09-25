@@ -595,3 +595,29 @@ Decision:
 
 Next:
 - Monitor H4; no test shards or merge.
+
+## [2026-09-25 21:30 IST]
+
+Task:
+- H4 v2/v3 launch failures (kernel stub) + fix.
+
+Files changed:
+- scripts/kaggle/make_kernels.py: the stub finds the bundle by content (BUNDLE_COMMIT == job commit) under any /kaggle/input layout, prefers a dataset copy over a kernel-output copy, and on failure prints the mount tree and exits FAIL-CLOSED.
+- scripts/kaggle/kaggle_job.py: the official data root is found under any layout (single train_source1.tsv, climbed to the ancestor holding GT + test files), fail-closed. Export/shard globs are rooted at the same input dir.
+- tests/test_kaggle_stub.py: fake-layout tests for both.
+
+Experiment:
+- H4 v2 (21:04) and v3 (21:12): ERROR in the stub. `AssertionError: []`: no BUNDLE_COMMIT under /kaggle/input/datasets/** (the hard-coded layout), although the dataset contains it (verified by download).
+- The stub fails before any repository code runs: no data loaded, H4 untouched.
+
+Result:
+- 123/123 tests pass locally (2.5 GB cap).
+
+Commit:
+- this commit.
+
+Decision:
+- Rebuild the bundle from this commit; re-launch only H4.
+
+Next:
+- Monitor H4; report and stop.

@@ -535,3 +535,4 @@ Related experiment:
 
 Related commit:
 - this commit
+- [21:30 update] H4 v2/v3 failed in the kernel stub (hard-coded mount layout). Fixed with layout-agnostic, content-matched bundle + data discovery (fail-closed with diagnostics). 123 tests pass. Re-launch only H4.

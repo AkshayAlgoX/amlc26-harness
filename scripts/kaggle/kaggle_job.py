@@ -23,7 +23,22 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-DATA = "/kaggle/input/datasets/akshayalgox/amlc26-2026-official-data-v2"
+INPUT = Path(os.environ.get("AMLC_INPUT", "/kaggle/input"))
+
+
+def find_data_root(input_dir: Path = INPUT) -> Path:
+    """Official data root under ANY mount layout: the single train_source1.tsv, climbed to the nearest ancestor that
+    also holds train_ground_truth.tsv and test_source1.tsv. Fails closed on zero or several candidates."""
+    hits = sorted(input_dir.rglob("train_source1.tsv"))
+    if len(hits) != 1:
+        raise SystemExit(f"FAIL-CLOSED: expected exactly one train_source1.tsv under {input_dir}, found {len(hits)}")
+    d = hits[0].parent
+    while True:
+        if list(d.rglob("train_ground_truth.tsv")) and list(d.rglob("test_source1.tsv")):
+            return d
+        if d == input_dir or d.parent == d:
+            raise SystemExit("FAIL-CLOSED: official data root (train + test files) not found")
+        d = d.parent
 
 
 def sha(p) -> str:
@@ -55,7 +70,12 @@ def main(job: dict) -> int:
         return fail(f"bundle commit {commit[:12]} != job {job['bundle_commit'][:12]}")
     if sha(REPO / "experiments/configs/h4_frozen.json") != job["config_sha256"]:
         return fail("canonical config sha differs from the job")
-    env = dict(os.environ, DATA_ROOT=DATA, PYTHONDONTWRITEBYTECODE="1", PYTHONUNBUFFERED="1")
+    try:
+        data = str(find_data_root())
+    except SystemExit as e:
+        return fail(str(e))
+    summary["data_root"] = data
+    env = dict(os.environ, DATA_ROOT=data, PYTHONDONTWRITEBYTECODE="1", PYTHONUNBUFFERED="1")
     rc = run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"], env)
     summary["steps"].append({"tests": rc})
     if rc != 0:
@@ -66,7 +86,7 @@ def main(job: dict) -> int:
         rc = run([sys.executable, "experiments/agy2_pipeline.py"], dict(env, PIPELINE_MODE=kind, OUT_DIR=str(out)))
         summary["steps"].append({kind: rc})
     elif kind == "test_shards":
-        mans = [Path(p).parent for p in glob.glob("/kaggle/input/**/export/manifest.json", recursive=True)]
+        mans = [Path(p).parent for p in glob.glob(str(INPUT / "**" / "export/manifest.json"), recursive=True)]
         mans = [m for m in mans if json.loads((m / "manifest.json").read_text()).get("mode") == "h4"]
         if len(mans) != 1:
             return fail(f"expected exactly one H4 export, found {len(mans)}")
@@ -79,12 +99,12 @@ def main(job: dict) -> int:
             if rc != 0:
                 return fail(f"shard {i} failed")
     elif kind == "merge":
-        mans = [Path(p).parent for p in glob.glob("/kaggle/input/**/export/manifest.json", recursive=True)]
+        mans = [Path(p).parent for p in glob.glob(str(INPUT / "**" / "export/manifest.json"), recursive=True)]
         mans = [m for m in mans if json.loads((m / "manifest.json").read_text()).get("mode") == "h4"]
         if len(mans) != 1:
             return fail(f"expected exactly one H4 export, found {len(mans)}")
-        shard_dirs = sorted({str(Path(p).parent) for p in glob.glob("/kaggle/input/**/shard_*_meta.json", recursive=True)})
-        args = [sys.executable, "experiments/agy2_pipeline_merge.py", "--models", str(mans[0]), "--data-root", DATA,
+        shard_dirs = sorted({str(Path(p).parent) for p in glob.glob(str(INPUT / "**" / "shard_*_meta.json"), recursive=True)})
+        args = [sys.executable, "experiments/agy2_pipeline_merge.py", "--models", str(mans[0]), "--data-root", data,
                 "--out", str(out / "output"), "--organiser-validator", str(REPO / "third_party/organiser/validate_submission.py")]
         for d in shard_dirs:
             args += ["--shards", d]
