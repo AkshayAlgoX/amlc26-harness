@@ -85,3 +85,52 @@ and holdout ID lists can never enter it; this is covered by `tests/test_package.
 2. Whether the H1 training-sample ID list ships in the package (needed only to re-train).
 3. Budget Top-80 (validated) vs Top-40 (half the compute and file size; exp10 arm measures the H1 cost).
 4. Whether Kaggle allows three concurrent CPU sessions for Run 2.
+
+## Hardening additions (2026-09-25 evening)
+- **B2nc**: `experiments/agy2_pipeline_freeze.py --variant B2nc` sets `drop_features: ["country"]`, which removes
+  `country` from the pruner and the matcher. The freeze refuses B2nc and Top-40 unless it is given exp10 results
+  with the B2 anchor reproduced and the matching pre-registered decision true.
+- **Fail-closed checks:**
+  - module sha256;
+  - fold contract (`amlc26-exp7-fold-v1`, 5);
+  - exact pruner/matcher feature lists;
+  - budget ∈ {40, 80};
+  - H1/H4 list hashes and H4 re-derivation;
+  - the export manifest (test mode requires `mode: h4` and identical feature lists);
+  - shard coverage in the merge.
+- **dev mode** (`PIPELINE_MODE=dev`): H1 only; H4 is never queried or scored. Its config may be non-canonical,
+  built with `dev_config(...)` for retrieval lanes and for extra training S1s drawn disjoint from H0–H4. Lanes are
+  refused in h4 and test mode.
+- **Merge validation**: `stream_validate` checks, in bounded memory, the headers, coverage and duplicates, that
+  every ID has an S2-/S3- prefix and exists in the test set, and that matches ⊆ candidates. It frees merge memory
+  first and then runs the vendored organiser validator (`third_party/organiser`) as a separate process.
+  - The organiser's ID-existence check is opt-in (`--check-ids`, memory-heavy); the streamed validator always
+    does it.
+- **Artifacts** also save C0 (normalised S1 and pool-target texts, numbers and PINs) and C1 (per-country
+  vectorizers, reverse DF mask, address DF, name-token DF).
+  - Target texts are restricted to pool targets: saving truth-only targets would reveal labels.
+  - Export manifests carry no H4-derived metric.
+- **Kernels**: `scripts/kaggle/make_kernels.py --commit <sha> --bundle-slug <slug> --out <dir>` writes the bundle
+  stage (git archive + `BUNDLE_COMMIT`) and five stub kernels. The chain is h4 → test_{US,India,France} → merge.
+  All logic is in `scripts/kaggle/kaggle_job.py`, which checks the commit, the config sha and the tests before
+  doing anything. Nothing is pushed automatically.
+- **Post-exp10 experiment scripts** (Kaggle, cache or saved-artifact only):
+  - `agy2_mine_b2_errors.py` (India-first B2 error mining);
+  - `agy2_exp11_seed_stability.py` (noise floor);
+  - `agy2_pruner_from_pool.py` (pruner variants from the saved pool; its base variant reproduces the stored scores
+    exactly);
+  - `agy2_lane_romanization.py` (leakage-safe lane node), followed by a dev-mode pipeline run for its downstream
+    effect.
+
+## Exact order after exp10
+1. Read `exp10_results.json`. If `anchor.b2_reproduced` is false, stop: no decision may be taken.
+2. Re-freeze with the pre-registered decisions:
+   `agy2_pipeline_freeze.py --exp9-results ... [--variant B2nc] [--top-n 40] --exp10-results ...`.
+   Re-run the tests, commit, and build the bundle and kernels from that commit.
+3. H4 kernel (`amlc26-p-h4`): the only use of H4 labels. It exports the production models and the C0–C6
+   artifacts.
+4. Test kernels (US, India, France) run in parallel if Kaggle allows. Then the merge kernel produces
+   `output/*.tsv` and the validators.
+5. Fill in `docs/Documentation_AMLC26.md`, build the package, and hand over to the captain for upload.
+6. Only if time remains: cached ceiling experiments (mining → India features; seed floor; lanes via dev mode).
+   Any change adopted after H4 is backed only by H1 out-of-fold evidence.

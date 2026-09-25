@@ -73,7 +73,12 @@ def test_no_h4_path_uses_r3():
     cfg = ROOT / "experiments" / "configs" / "h4_frozen.json"
     if cfg.is_file():
         c = json.loads(cfg.read_text())
-        assert c["candidate"]["name"] == "B2"
+        assert c["candidate"]["name"] in ("B2", "B2nc")
+        if c["candidate"]["name"] == "B2nc" or c["budget"]["top_n"] == 40:
+            assert c["candidate"]["exp10_evidence"], "B2nc / Top-40 require pre-registered exp10 evidence"
+        assert c["drop_features"] == (["country"] if c["candidate"]["name"] == "B2nc" else [])
+        for stage in ("pruner", "matcher"):
+            assert ("country" in c[stage]["features"]) == (c["candidate"]["name"] == "B2")
         assert not c["set_rules"]["thr_t"] and not c["set_rules"]["topn_n"] and not c["set_rules"]["gap_t"]
         assert c["set_rules"]["expF_s"], "expected-F0.5 must be the only decision family"
         assert not any("r3" in k for k in c["set_rules"])

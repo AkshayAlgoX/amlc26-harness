@@ -143,7 +143,7 @@ def test_test_mode_sharding_exact_and_merge_valid(world):
     assert fr["s1"] > 0 and fr["pairs"] > 0
     from experiments import agy2_pipeline_merge as MG
     args = ["--shards", str(root / "shA"), "--models", str(root / "h4" / "export"), "--data-root", str(world["syn"]["data"]),
-            "--out", str(root / "out")]
+            "--out", str(root / "out"), "--repo-validator"]
     if ORGANISER_VALIDATOR.is_file():
         args += ["--organiser-validator", str(ORGANISER_VALIDATOR)]
     env_backup = dict(os.environ)
@@ -156,6 +156,7 @@ def test_test_mode_sharding_exact_and_merge_valid(world):
         rep = MG.main(args)
     finally:
         os.environ.clear(); os.environ.update(env_backup)
+    assert rep["stream_validator"]["valid"], rep["stream_validator"]
     assert rep["repo_validator"]["valid"], rep["repo_validator"]
     if ORGANISER_VALIDATOR.is_file():
         assert rep["organiser_validator"]["exit_code"] == 0, rep["organiser_validator"]
@@ -167,7 +168,11 @@ def test_test_mode_sharding_exact_and_merge_valid(world):
     cand = dict(zip(cp.source1_entity_id, cp.candidate_entity_ids))
     for s1, m in zip(mr.source1_entity_id, mr.matched_entity_ids):
         assert set(filter(None, m.split(","))) <= set(filter(None, cand[s1].split(","))), s1
-    assert (mr.matched_entity_ids == "").any() and (mr.matched_entity_ids.str.count(",") >= 1).any()   # zero- and multi-match
+    one = (mr.matched_entity_ids != "") & (mr.matched_entity_ids.str.count(",") == 0)
+    assert (mr.matched_entity_ids == "").any() and one.any() and (mr.matched_entity_ids.str.count(",") >= 1).any()
+    t1 = pd.read_csv(world["syn"]["data"] / "test_source1.tsv", sep="\t", dtype=str, keep_default_na=False)
+    fr = set(t1.entity_id[t1.country == "France"])
+    assert fr and fr <= set(mr.source1_entity_id)                                  # unseen country present, no crash
 
 
 def test_fail_closed_on_pinned_module_mismatch(world, tmp_path):

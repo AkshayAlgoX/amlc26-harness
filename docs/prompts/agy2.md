@@ -444,3 +444,27 @@ Related experiment:
 
 Related commit:
 - none (the commit set is proposed to the operator, not committed)
+
+## [2026-09-25 19:35 IST — zero-issue hardening while exp10 runs]
+
+Task:
+- Fix every safe engineering/integrity blocker from the red team, without heavy compute and without touching exp10 or H4.
+
+Prompt summary:
+- B2nc (country removed from pruner AND matcher) and a deterministic encoding for unseen countries.
+- Fail-closed canonical freeze; H4/test feature parity test; merge validator memory; deterministic shards with one global conflict pass.
+- Runners (not launched); model export + C0-C6 artifacts; package hardening; leakage-safe romanization lane infrastructure; cached post-exp10 experiment scripts.
+
+Expected output:
+- Files changed, tests, remaining H4 / submission blockers, untested opportunities, exact post-exp10 order.
+
+Actual result:
+- 114 tests pass locally (synthetic data only, 3 GB cap); 1 skipped until commit.
+- H4<->test mode parity is bit-identical (61 features + score); B2nc verified; the pool-based pruner reproduces the stored prune_p exactly; the streamed validator agrees with the repo and organiser validators (stricter on matches not in candidates).
+- Found and fixed: the organiser validator skips the ID-existence check unless --check-ids (the streamed validator always checks); saving truth-only target texts would have leaked labels (now pool targets only).
+
+Related experiment:
+- agy2-er-010 hardening (no runs)
+
+Related commit:
+- this commit

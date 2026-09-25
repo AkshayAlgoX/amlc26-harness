@@ -469,3 +469,27 @@ Decision:
 
 Next:
 - exp10 on Kaggle (~1.2 h, cache only) -> freeze -> H4 + export -> test shards -> merge -> package.
+
+## [2026-09-25 19:35 IST]
+
+Task:
+- Pre-H4 / pre-submission hardening (code + synthetic tests only; exp10 untouched).
+
+Files changed:
+- Modified: experiments/agy2_pipeline.py, agy2_pipeline_merge.py, agy2_pipeline_freeze.py, configs/h4_frozen.json (re-frozen: B2, Top-80, expected-F0.5), scripts/build_submission_package.py, tests/{test_pipeline.py,pipeline_synth.py,test_h4_integrity.py}, docs/PIPELINE_RUNBOOK.md.
+- New: experiments/{agy2_lane_romanization.py, agy2_mine_b2_errors.py, agy2_pruner_from_pool.py, agy2_exp11_seed_stability.py}, experiments/configs/test_shards.json, scripts/kaggle/{kaggle_job.py,make_kernels.py}, third_party/organiser/ (vendored organiser validator), tests/test_pipeline_hardening.py, docs/Documentation_AMLC26.md (draft).
+
+Experiment:
+- none run (synthetic tests; local smoke of the seed-stability and mining scripts on synthetic stores).
+
+Result:
+- 114 passed, 1 skipped.
+
+Commit:
+- this commit.
+
+Decision:
+- H4 still waits for the exp10 decisions and the re-freeze.
+
+Next:
+- After exp10: re-freeze -> bundle/kernels -> H4 -> test shards -> merge -> documentation/package.

@@ -1,0 +1,8 @@
+{
+  "salt": "amlc26-test-shard-v1",
+  "assignment": "shard = int.from_bytes(sha256(salt|s1_id)[:8]) % count, within the S1's country (agy2_pipeline.shard_of)",
+  "shards": {"US": 5, "India": 6, "France": 2},
+  "test_s1_per_country": {"US": 663106, "India": 809986, "France": 259452},
+  "max_s1_per_shard_target": 150000,
+  "conflict_resolution": "global, exactly once, in agy2_pipeline_merge.py after all shards exist"
+}

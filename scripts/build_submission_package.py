@@ -27,14 +27,16 @@ CODE_ALLOWLIST = [
     "experiments/agy2_exp4_fresh_holdout_validation.py", "experiments/agy2_exp5_corrected_holdout.py",
     "experiments/agy2_exp6_integrated.py", "experiments/agy2_exp7_prep_h3.py", "experiments/agy2_exp7_freeze.py",
     "experiments/agy2_exp7_h3.py", "experiments/agy2_exp8_store.py", "experiments/agy2_exp9_features.py",
-    "experiments/agy2_exp9_h4_freeze.py", "experiments/configs/h4_frozen.json",
+    "experiments/agy2_exp9_h4_freeze.py", "experiments/configs/h4_frozen.json", "experiments/configs/test_shards.json",
     "src/__init__.py", "src/er/__init__.py", "src/er/blocking.py", "src/er/features.py", "src/er/generation.py",
     "src/er/ids.py", "src/er/loader.py", "src/er/metric.py", "src/er/normalize.py", "src/er/pipeline.py",
     "src/er/singletons.py", "src/er/split.py", "src/er/validator.py",
 ]
 TRAINING_SAMPLE = "exclude_ids/prev_val_s1_50k.ids"
 FORBIDDEN_PARTS = ("data/", "expected/", "scratch/", "artifacts/", "output/", "__pycache__", ".ipynb")
-FORBIDDEN_NAMES = ("romanization", "retrieval_attack", "top_misses", "baseline_misses", "baseline_positives", "patch", "kaggle_run")
+FORBIDDEN_NAMES = ("romanization", "retrieval_attack", "top_misses", "baseline_misses", "baseline_positives", "patch",
+                   "kaggle_run", "retrieval_report", "ablation", "prompts/", "contributions/", "third_party", "exclude_ids",
+                   "h1_", "h3_", "h4_s1", "exp5_holdout", "prev_val")
 
 
 def plan(team: str, outputs: Path, export: Path, doc: Path, include_training_sample=False) -> dict:
@@ -58,7 +60,7 @@ def plan(team: str, outputs: Path, export: Path, doc: Path, include_training_sam
         inner = member.split(f"{base}/src/", 1)[-1] if member.startswith(f"{base}/src/") else ""
         if inner and (any(p in inner for p in FORBIDDEN_PARTS) and inner != TRAINING_SAMPLE):
             raise SystemExit(f"forbidden path in package: {member}")
-        if any(n in member.lower() for n in FORBIDDEN_NAMES):
+        if any(n in member.lower() for n in FORBIDDEN_NAMES) and not member.endswith(TRAINING_SAMPLE):
             raise SystemExit(f"forbidden file in package: {member}")
         if inner.endswith(".ids") and inner != TRAINING_SAMPLE:
             raise SystemExit(f"holdout id list in package: {member}")

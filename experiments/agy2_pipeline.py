@@ -4,6 +4,8 @@ Derived by anchored edits from experiments/agy2_exp9_h4_eval.py (exp7 retrieval/
 kept unchanged as the parity reference (tests/test_pipeline.py). Modes (PIPELINE_MODE):
   h4   : train pruner + matcher on H1 (cross-fitted), select the expected-F0.5 rule on H1 OOF only, score sealed H4 ONCE,
          and export the fold models + decision + C2/C4/C5 artifacts with a sha256 manifest (the production model).
+  dev  : like h4 but H1 only (H4 is never queried, scored or read beyond its IDs for the statistics exclusion); used for
+         every post-freeze development experiment (optional retrieval lanes, optional extra training S1).
   test : score one deterministic shard (country x SHA-256 bucket of s1_id) of test_source1 with the exported fold models
          (each S1 scored by the pruner_k -> matcher_k chain of its own fold, exactly as H4 evaluated); writes shard scores.
          The global expected-F0.5 decision + one-to-one conflict resolution + TSV writing is agy2_pipeline_merge.py.
@@ -43,12 +45,16 @@ ENV = os.environ.get
 CANONICAL_CONFIG = ROOT / "experiments" / "configs" / "h4_frozen.json"
 MODE = ENV("PIPELINE_MODE", "h4")
 SMOKE = ENV("PIPELINE_SMOKE", "0") == "1"                      # synthetic tests only
-CONFIG = Path(ENV("PIPELINE_CONFIG", str(CANONICAL_CONFIG))) if SMOKE else CANONICAL_CONFIG
+# h4 / test read ONLY the canonical frozen config; dev experiments (and synthetic tests) may pass their own config
+CONFIG = Path(ENV("PIPELINE_CONFIG", str(CANONICAL_CONFIG))) if (SMOKE or MODE == "dev") else CANONICAL_CONFIG
 MODELS_DIR = Path(ENV("MODELS_DIR", "")) if ENV("MODELS_DIR") else None
 SHARD_COUNTRY = ENV("SHARD_COUNTRY", "")
 SHARD_INDEX, SHARD_COUNT = int(ENV("SHARD_INDEX", "0")), int(ENV("SHARD_COUNT", "1"))
 SHARD_SALT = "amlc26-test-shard-v1"
 COUNTRY_CODE = {"India": 0.0, "US": 1.0}   # == exp7/exp9 enumerate(sorted({"India", "US"})); unseen country -> NaN
+ALLOWED_DROP = {"country"}                   # B2nc = drop_features ["country"] from BOTH pruner and matcher
+FOLD_CONTRACT = ("amlc26-exp7-fold-v1", 5)
+BUDGETS_ALLOWED = (40, 80)
 from experiments import agy2_exp9_features as F9  # noqa: E402
 from experiments import agy2_exp8_store as ST  # noqa: E402  (parquet I/O; S is the selected rule below)
 DATA_ROOT = Path(ENV("DATA_ROOT", "/kaggle/input/datasets/akshayalgox/amlc26-2026-official-data-v2"))
@@ -181,7 +187,7 @@ def constrain(D, sel):
 def main():
     cfg = json.loads(CONFIG.read_text())
     code_sha = sha256_file(Path(__file__))
-    if MODE not in ("h4", "test"):
+    if MODE not in ("h4", "test", "dev"):
         raise SystemExit(f"unknown PIPELINE_MODE {MODE}")
     if cfg["code_sha256"].get("experiments/agy2_pipeline.py") != code_sha:
         raise SystemExit("FAIL-CLOSED: experiments/agy2_pipeline.py differs from the frozen config")
@@ -192,8 +198,21 @@ def main():
     R, PRN, MAT, RUL = cfg["retrieval"], cfg["pruner"], cfg["matcher"], cfg["set_rules"]
     EXTRA = cfg["candidate"]["extra_features"]
     assert set(EXTRA) <= set(F9.NEW_FEATURES)
-    M_RUN = M_FEATS + EXTRA
-    assert PRN["features"] == PR_FEATS and MAT["features"] == M_RUN, "feature lists differ from frozen config"
+    DROP = list(cfg.get("drop_features", []))
+    if not set(DROP) <= ALLOWED_DROP:
+        raise SystemExit(f"FAIL-CLOSED: unsupported drop_features {DROP}")
+    LANES = list(cfg.get("lanes", []))
+    if LANES and MODE != "dev":
+        raise SystemExit("FAIL-CLOSED: retrieval lanes are development-only until validated (dev mode)")
+    LANE_FEATS = [f for ln in LANES for f in (f"flag_lane_{ln['name']}", f"lane_{ln['name']}_score", f"lane_{ln['name']}_rank")]
+    PR_RUN = [f for f in PR_FEATS + LANE_FEATS if f not in DROP]                     # pruner features
+    M_RUN = [f for f in PR_FEATS + LANE_FEATS + M_FEATS[len(PR_FEATS):] + EXTRA if f not in DROP]   # == M_FEATS + EXTRA
+    if PRN["features"] != PR_RUN or MAT["features"] != M_RUN:
+        raise SystemExit("FAIL-CLOSED: pruner/matcher feature lists differ from the frozen config")
+    if (cfg["folds"]["salt"], cfg["folds"]["nfold"]) != FOLD_CONTRACT:
+        raise SystemExit("FAIL-CLOSED: fold configuration differs from the exp7 contract")
+    if cfg["budget"]["top_n"] not in BUDGETS_ALLOWED and not SMOKE:
+        raise SystemExit("FAIL-CLOSED: budget must be Top-40 or Top-80")
     NFOLD, FOLD_SALT = cfg["folds"]["nfold"], cfg["folds"]["salt"]
     TOPN, FLOOR = cfg["budget"]["top_n"], cfg["budget"]["floor"]
     POOL = 0
@@ -247,7 +266,13 @@ def main():
         assert all(not (set(ids_h4) & v) for v in prior.values()), "H4 overlaps a prior list"
         assert salted_holdout(s1_ids, set().union(*prior.values()), cfg["h4"]["n"], cfg["h4"]["salt"]) == ids_h4, "H4 re-derivation mismatch"
         log("groups verified: DEV=H1, H4 disjoint from H0-H3 and re-derived exactly")
-        Q = ids_dev + ids_h4
+        if cfg.get("extra_dev"):                              # optional extra TRAINING S1, disjoint from every holdout
+            xd = cfg["extra_dev"]
+            extra = salted_holdout(s1_ids, set(ids_dev) | set(ids_h4) | set().union(*prior.values()), xd["n"], xd["salt"])
+            assert not (set(extra) & (set(ids_h4) | set().union(*prior.values())))
+            ids_dev = ids_dev + extra
+            log(f"extra training S1: {len(extra):,} (salt {xd['salt']})")
+        Q = ids_dev + (ids_h4 if MODE == "h4" else [])
         nq = len(Q)
         bounds = {"dev": (0, len(ids_dev)), "h4": (len(ids_dev), nq)}
         grp_q = np.zeros(nq, np.int8); grp_q[bounds["h4"][0]:] = 1
@@ -492,6 +517,37 @@ def main():
     del upk, ub, ufr, urr, ufs, urs
     gc.collect()
     log(f"pool: {len(P):,} unique pairs")
+    for ln in LANES:                                          # dev-only retrieval lanes (e.g. romanization), exact union
+        lp = Path(ln["path"]) if Path(ln["path"]).is_absolute() else ROOT / ln["path"]
+        if sha256_file(lp) != ln["sha256"]:
+            raise SystemExit(f"FAIL-CLOSED: lane {ln['name']} file changed")
+        L = ST.read_parquet(lp)
+        L = L[L.s1_id.isin(qi)]
+        lq = L.s1_id.map(qi).values.astype(np.int64)
+        lk = (lq << 32) | L.code.values.astype(np.int64)
+        fl, sc_, rk_ = f"flag_lane_{ln['name']}", f"lane_{ln['name']}_score", f"lane_{ln['name']}_rank"
+        pk_ = (P.q.values.astype(np.int64) << 32) | P.code.values
+        pos = np.searchsorted(pk_, lk); pos = np.minimum(pos, len(pk_) - 1)
+        hit = pk_[pos] == lk
+        P[fl] = np.int8(0); P[sc_] = np.float32(0); P[rk_] = np.int16(999)
+        P.loc[P.index[pos[hit]], fl] = 1
+        P.loc[P.index[pos[hit]], sc_] = L.score.values[hit].astype(np.float32)
+        P.loc[P.index[pos[hit]], rk_] = L["rank"].values[hit].astype(np.int16)
+        nw = L[~hit]
+        if len(nw):
+            nq_ = lq[~hit].astype(np.int32)
+            N = pd.DataFrame({"q": nq_, "code": nw.code.values.astype(np.int64)})
+            N["label"] = np.isin(lk[~hit], truth_keys)
+            N["g"] = grp_q[nq_]; N["fold"] = fold_q[nq_]; N["is_s2"] = (N.code.values & 3) == 2
+            for c_ in ("flag_A", "flag_B", "flag_F100", "flag_F200", "flag_R1", "flag_R5", "flag_b2", "flag_b3", "flag_b4", "num_channels"):
+                N[c_] = np.int8(0)
+            N["fwd_tfidf"], N["fwd_rank"], N["rev_tfidf"], N["rev_rank"] = np.float32(0), np.int32(9999), np.float32(0), np.int16(99)
+            for c_ in P.columns:
+                if c_.startswith("flag_lane_") or (c_.startswith("lane_") and c_ not in (sc_, rk_)):
+                    N[c_] = P[c_].dtype.type(0) if not c_.endswith("_rank") else np.int16(999)
+            N[fl], N[sc_], N[rk_] = np.int8(1), nw.score.values.astype(np.float32), nw["rank"].values.astype(np.int16)
+            P = pd.concat([P, N[P.columns]], ignore_index=True).sort_values(["q", "code"], kind="stable").reset_index(drop=True)
+        log(f"lane {ln['name']}: {int(hit.sum()):,} existing + {int((~hit).sum()):,} new pairs")
 
     # ---------------- candidate + truth target texts (from the same loader frames)
     need = np.union1d(np.unique(P.code.values), np.fromiter(all_truth_codes, dtype=np.int64))
@@ -544,8 +600,8 @@ def main():
     P["exact_name"], P["exact_addr"], P["num_match"], P["pin_match"] = f_en, f_ea, f_num, f_pin
     q_amiss = np.array([not s1_addr_raw[e].strip() for e in Q], dtype=np.int8)
     q_cty = np.array([country_code(s1_country[e]) for e in Q], dtype=np.float32)
-    if MODE == "h4":
-        assert not np.isnan(q_cty).any(), "h4 groups must be US/India only"
+    if MODE in ("h4", "dev"):
+        assert not np.isnan(q_cty).any(), "training/validation groups must be US/India only"
     q_nlen = np.array([len(s) for s in qname]); t_nlen = np.array([len(s) for s in tname])
     P["q_addr_missing"] = q_amiss[qv]
     P["t_addr_missing"] = traw_empty[tv].astype(np.int8)
@@ -563,11 +619,16 @@ def main():
 
     import lightgbm as lgb
     EXPORT = OUT_DIR / "export"
-    if MODE == "h4":
+    if MODE in ("h4", "dev"):
         EXPORT.mkdir(parents=True, exist_ok=True)
     else:
         assert MODELS_DIR is not None and MODELS_DIR.is_dir(), "test mode needs MODELS_DIR (the h4 export)"
         export_man = verify_export(MODELS_DIR, cfg["code_sha256"], cfg_sha)
+        if export_man.get("mode") != "h4":
+            raise SystemExit("FAIL-CLOSED: test inference requires the H4-validated export (mode h4)")
+        dec_ = json.loads((MODELS_DIR / "decision.json").read_text())
+        if dec_.get("pruner_features") != PR_RUN or dec_.get("matcher_features") != M_RUN:
+            raise SystemExit("FAIL-CLOSED: exported model features differ from the frozen config")
     from sklearn.metrics import roc_auc_score
 
     def lgb_crossfit(D, feats, prm, tag):
@@ -616,13 +677,14 @@ def main():
                 "export_roundtrip_max_abs_diff": roundtrip}
         for gi, g in enumerate(GROUPS):
             mk = D.g.values == gi
-            info[f"auc_{g}"] = float(roc_auc_score(y[mk], pred[mk]))
+            if mk.any() and 0 < y[mk].sum() < mk.sum():
+                info[f"auc_{g}"] = float(roc_auc_score(y[mk], pred[mk]))
         del X
         return pred, info
 
     # ---------------- stage 2: cross-fitted pruner
     t_p = time.time()
-    P["prune_p"], pinfo = lgb_crossfit(P, PR_FEATS, PRN, "pruner")
+    P["prune_p"], pinfo = lgb_crossfit(P, PR_RUN, PRN, "pruner")
     P.sort_values(["q", "prune_p"], ascending=[True, False], inplace=True, kind="stable")
     P["prune_rank"] = (P.groupby("q").cumcount() + 1).astype(np.int32)
     res["pruner"] = pinfo
@@ -672,6 +734,10 @@ def main():
                            "prune_p": M.prune_p.values.astype(np.float64), "prune_rank": M.prune_rank.values.astype(np.int32),
                            "p": M.p.values.astype(np.float64)})
         ST.write_parquet(sc, OUT_DIR / f"shard_{tag}_scores.parquet")
+        if ENV("SAVE_FEATURES", "0") == "1":                      # optional test-side C4 (off at full scale by default)
+            fe = M[M_RUN].copy()
+            fe["s1_pos"], fe["code"], fe["p"] = q_pos[M.q.values], M.code.values.astype(np.int64), M.p.values
+            ST.write_parquet(fe, OUT_DIR / f"shard_{tag}_features.parquet")
         meta = {"shard": tag, "country": SHARD_COUNTRY, "index": SHARD_INDEX, "count": SHARD_COUNT, "s1": nq,
                 "s1_with_candidates": int(sc.s1_pos.nunique()), "pairs": int(len(sc)), "config_sha256": cfg_sha,
                 "code_sha256": cfg["code_sha256"], "export_manifest_sha256": sha256_file(MODELS_DIR / "manifest.json"),
@@ -718,7 +784,9 @@ def main():
     log(f"FROZEN DECISION (DEV only): {res['selected']}")
     (EXPORT / "decision.json").write_text(json.dumps({"rule": sel_rule, "params": S["params"], "constrained": S["constrained"],
                                                       "budget": {"top_n": TOPN, "floor": FLOOR}, "m_dev": m_dev,
-                                                      "pruner_features": PR_FEATS, "matcher_features": M_RUN}, indent=2))
+                                                      "pruner_features": PR_RUN, "matcher_features": M_RUN,
+                                                      "drop_features": DROP, "candidate": cfg["candidate"]["name"],
+                                                      "lanes": [ln["name"] for ln in LANES]}, indent=2))
     ART = OUT_DIR / "artifacts"
     ART.mkdir(parents=True, exist_ok=True)
     keep_cols = [c for c in P.columns if c not in ("t_idx",)]
@@ -733,10 +801,26 @@ def main():
     mf["s1_id"] = np.array(Q, dtype=object)[mf.q.values]
     ST.write_parquet(mf, ART / "c4c5_matcher_rows.parquet")             # matcher features + OOF/holdout scores
     del mf
-    write_manifest(EXPORT, {"kind": "h4_export", "code_sha256": cfg["code_sha256"], "config_sha256": cfg_sha,
-                            "pruner": pinfo, "matcher": minfo})
-    write_manifest(ART, {"kind": "h4_artifacts", "code_sha256": cfg["code_sha256"], "config_sha256": cfg_sha,
-                         "note": "label = -1 for H4 rows (H4 labels are never persisted)"})
+    import pickle                                             # C0 / C1: normalisation + retrieval statistics
+    for c in countries:
+        with open(ART / f"c1_stats_{c}.pkl", "wb") as fh:
+            pickle.dump({"vectorizer": V[c][0], "rev_keep": V[c][1], "addr_df": dict(addr_df[c]), "stats_exclude": cfg["stats_exclude"]}, fh)
+    ST.write_parquet(pd.DataFrame({"token": list(df_names), "df": np.fromiter(df_names.values(), np.int64, len(df_names))}),
+                     ART / "c1_name_df.parquet")
+    (ART / "c1_name_df_meta.json").write_text(json.dumps({"n_docs": n_docs}))
+    ST.write_parquet(pd.DataFrame({"s1_id": Q, "qn": qname, "qa": qaddr, "q_pin": [q_parts[i][0] or "" for i in range(nq)],
+                                   "q_num": [q_parts[i][1] or "" for i in range(nq)], "country": [s1_country[e] for e in Q]}),
+                     ART / "c0_s1_texts.parquet")
+    in_pool_t = np.isin(tcode_s, np.unique(P.code.values))   # ONLY pool targets (truth-only targets would leak labels)
+    it_ = np.flatnonzero(in_pool_t)
+    ST.write_parquet(pd.DataFrame({"code": tcode_s[it_], "tn": [tname[j] for j in it_], "ta": [taddr[j] for j in it_],
+                                   "t_pin": [tpin[j] or "" for j in it_], "t_num": [tnum[j] or "" for j in it_],
+                                   "t_raw_empty": traw_empty[it_]}), ART / "c0_target_texts.parquet")
+    write_manifest(EXPORT, {"kind": "export", "mode": MODE, "code_sha256": cfg["code_sha256"], "config_sha256": cfg_sha,
+                            "candidate": cfg["candidate"]["name"], "drop_features": DROP,
+                            "pruner_best_iters": pinfo["best_iters"], "matcher_best_iters": minfo["best_iters"]})
+    write_manifest(ART, {"kind": "artifacts", "mode": MODE, "code_sha256": cfg["code_sha256"], "config_sha256": cfg_sha,
+                         "note": "label = -1 for H4 rows (H4 labels are never persisted); target texts restricted to pool"})
 
     # ---------------- stage 7: identical reports for DEV-OOF, H2, H3
     pool_keys = np.sort((P.q.values.astype(np.int64) << 32) | P.code.values)
@@ -800,19 +884,20 @@ def main():
                             "matching": int((in_budget & ~tp_mask).sum())},
         }
 
-    res["reports"] = {g: report(g) for g in GROUPS}
+    res["reports"] = {g: report(g) for g in GROUPS if bounds[g][1] > bounds[g][0]}
     res["meta"]["runtime_min"] = (time.time() - T0) / 60
     res["meta"]["peak_rss_mb_self"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
-    (OUT_DIR / "pipeline_h4_results.json").write_text(json.dumps(res, indent=2, default=float))
+    (OUT_DIR / f"pipeline_{MODE}_results.json").write_text(json.dumps(res, indent=2, default=float))
 
     print("\n" + "=" * 110)
     print(f"FROZEN: budget top{TOPN}_floor{FLOOR} | rule {sel_rule} {S['params']} constrained={S['constrained']} (chosen on DEV OOF {S['dev_oof_f05']:.6f})")
-    print(f"pruner AUC {({g: round(pinfo['auc_' + g], 4) for g in GROUPS})} | matcher AUC {({g: round(minfo['auc_' + g], 4) for g in GROUPS})}")
-    for g in GROUPS:
+    print(f"pruner AUC {({k: round(v, 4) for k, v in pinfo.items() if k.startswith('auc_')})} | "
+          f"matcher AUC {({k: round(v, 4) for k, v in minfo.items() if k.startswith('auc_')})}")
+    for g in res["reports"]:
         r = res["reports"][g]
         print(f"--- {g.upper()} {'(DEV cross-fitted OOF)' if g == 'dev' else '(evaluation only)'}")
         print(json.dumps(r, default=float))
-    log(f"done | results -> {OUT_DIR / 'pipeline_h4_results.json'}")
+    log(f"done | results -> {OUT_DIR / f'pipeline_{MODE}_results.json'}")
 
 
 if __name__ == "__main__":

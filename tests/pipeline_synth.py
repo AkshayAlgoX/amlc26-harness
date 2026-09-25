@@ -58,20 +58,40 @@ def _write(p: Path, header, rows):
     p.write_text(header + "\n" + "".join("\t".join(r) + "\n" for r in rows), encoding="utf-8")
 
 
-def make(root: Path, n_train=3000, n_test=1500, seed=0) -> dict:
-    """Writes data/{train,test}_*.tsv and H0..H4 id lists; returns paths and sizes."""
+DEVANAGARI = ["सेवन", "गैलक्सी", "प्रोजेक्ट्स", "सॉफ्टवेयर", "टेक्नोलॉजी", "इंडस्ट्रीज", "सर्विसेज", "ट्रेडर्स"]
+
+
+def make(root: Path, n_train=3000, n_test=1500, seed=0, translit=0, train_as_test=False) -> dict:
+    """Writes data/{train,test}_*.tsv and H0..H4 id lists; returns paths and sizes.
+    translit: number of extra India train S1 whose true S2 record carries a Devanagari name (S1 = its romanization).
+    train_as_test: test_* files are byte copies of train_* (for h4-vs-test feature parity on identical records)."""
     import sys
     rng = random.Random(seed)
     d = root / "data"
     d.mkdir(parents=True, exist_ok=True)
     s1, s2, s3, gt, nid = _split(rng, n_train, ["US", "India"], 1, 100000)
+    if translit:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from experiments.agy2_lane_romanization import romanize
+        for k in range(translit):
+            dev = " ".join(rng.sample(DEVANAGARI, 2))
+            sid, nid = f"S1-{n_train + 1 + k}", nid + 1
+            a_ = _addr(rng, "India")
+            s1.append((sid, romanize(dev) + " pvt ltd", a_, "India"))
+            s2.append((f"S2-{nid}", dev, a_, "India"))
+            gt.append((sid, f"S2-{nid}"))
     for n, rows in (("train_source1", s1), ("train_source2", s2), ("train_source3", s3)):
         _write(d / f"{n}.tsv", HDR, rows)
     _write(d / "train_ground_truth.tsv", "source1_entity_id\tmatched_entity_ids", gt)
-    t1, t2, t3, _, _ = _split(rng, n_test, ["US", "India", "France"], 900000, 5000000)
-    t1.append(("S1-999999", "zzqx unmatched entity", "", "France"))  # guaranteed empty candidate set candidate
-    for n, rows in (("test_source1", t1), ("test_source2", t2), ("test_source3", t3)):
-        _write(d / f"{n}.tsv", HDR, rows)
+    if train_as_test:
+        for n in ("source1", "source2", "source3"):
+            (d / f"test_{n}.tsv").write_bytes((d / f"train_{n}.tsv").read_bytes())
+        t1 = s1
+    else:
+        t1, t2, t3, _, _ = _split(rng, n_test, ["US", "India", "France"], 900000, 5000000)
+        t1.append(("S1-999999", "zzqx unmatched entity", "", "France"))  # guaranteed empty candidate set candidate
+        for n, rows in (("test_source1", t1), ("test_source2", t2), ("test_source3", t3)):
+            _write(d / f"{n}.tsv", HDR, rows)
     repo = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(repo))
     import experiments.agy2_exp5_corrected_holdout as X5
