@@ -247,3 +247,24 @@ Related experiment:
 
 Related commit:
 - see contributions entry
+
+## [2026-09-25 IST — exp6 launch]
+
+Task:
+- Build and run integrated EXP6 on Kaggle: retrieval -> learned pruner -> pair matcher -> set decision.
+
+Prompt summary:
+- One retrieval pass for two 50k S1 groups: the previous 50k is for training only, and the fresh exp5 holdout is for evaluation only. The fresh group never contributes labels, statistics, fitting or tuning. Pruner and matcher are LightGBM with GroupKFold by S1. Budgets Top-N 40..120 plus floors, with the constraint mean <= 80 and p99 <= 250. Set rules maximise macro F0.5. Compare unconstrained against greedy conflict resolution. Report measured values only. CPU only, and stop cleanly if it doesn't fit.
+
+Expected output:
+- Stage-7 table, best verified budget and fresh macro F0.5, FP/FN categories, dense-retrieval verdict.
+
+Actual result:
+- Code e27a582 (experiments/agy2_exp6_integrated.py, tests/test_exp6.py; 54/54 tests pass). The synthetic smoke test passed locally. The probe showed rapidfuzz is absent on Kaggle, so Jaro-Winkler is implemented in numba with a textbook self-test.
+- Private dataset akshayalgox/amlc26-agy2-exp6 (code + ID lists only) and private CPU kernel akshayalgox/amlc26-exp6-integrated v1 pushed; results pending.
+
+Related experiment:
+- agy2-er-006
+
+Related commit:
+- e27a582

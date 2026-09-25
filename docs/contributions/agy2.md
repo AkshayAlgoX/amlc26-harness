@@ -271,3 +271,30 @@ Decision:
 
 Next:
 - Drop Canon view, cap reverse hits per S1 and A buckets, then India residual triage; first-stage pruner to reach the budget.
+
+## [2026-09-25 09:30 IST]
+
+Task:
+- EXP6 integrated retrieval -> learned pruner -> matcher -> set decision (Kaggle CPU, measured).
+
+Files changed:
+- experiments/agy2_exp6_integrated.py, tests/test_exp6.py (e27a582); docs (this entry).
+
+Experiment:
+- agy2-er-006. Train = prev 50k S1 (172,636 links); fresh = exp5 holdout (asserted equal; 173,103 links); fresh is evaluation only.
+- Kaggle kernel akshayalgox/amlc26-exp6-integrated v1: COMPLETE, exit 0, 147.2 min, peak RSS 17,060 MB. Artifacts in ~/amlc26-kaggle-refresh/exp6/run/output/exp6/.
+
+Result (fresh):
+- Retrieval pool A+B+F@200+R@5+B2c+B3c+B4c: recall 96.594%, oracle 0.987493, mean 236.2, p99 484.
+- Pruner AUC 0.9982. Budget chosen on train OOF: top80 (fresh oracle 0.987252, recall 96.533%). top40: oracle 0.986817.
+- Matcher + expF rule + greedy conflicts: fresh macro F0.5 0.924759 (train OOF 0.924404). top40 0.924785, top120 0.924398.
+- Singletons 0.8607; card-1 0.8105; US 0.9434, India 0.8972. FN: 20,599 rejected by matcher/rule, 5,896 not retrieved, 105 pruned. FP 3,552.
+
+Commit:
+- e27a582 (code) + this docs commit.
+
+Decision:
+- Budget top40 is enough (matcher F0.5 is flat 40..120). The bottleneck is the matcher/decision (oracle 0.987 vs 0.925), not retrieval. Dense retrieval is not justified: 5 of 5,896 missed links have no token overlap.
+
+Next:
+- Stronger pair features (cross-encoder / richer name-address alignment), extended singleton gate grid (0.5 was the edge), card-1 and India error triage.
