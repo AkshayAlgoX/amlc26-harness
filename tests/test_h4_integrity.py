@@ -1,18 +1,14 @@
-"""Unit tests for H4 holdout integrity and R3 dynamic margin decision rule."""
+"""H4 holdout integrity (IDs only) + guard that no H4 path uses the retired R3 rule.
+Supersedes tests/test_h4_r3.py (its R3 and exp8-superset tests were retired with the R3 H4 freeze)."""
 from __future__ import annotations
 
 import hashlib
 import json
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
 
-from experiments import agy2_exp8_features as F
-from experiments import agy2_exp8_store as S
-from experiments.agy2_exp8_decide import Group
-from src.er.ids import code_source, decode_target_id, encode_target_id, is_target_id, source_of
+from src.er.ids import source_of
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -70,38 +66,14 @@ def test_prefix_source_classification(eid, expected_src):
     assert source_of(eid) == expected_src
 
 
-def test_frozen_retrieval_settings():
-    assert F.SUPERSET["k_fwd"] == 300
-    assert F.SUPERSET["rev_k"] == 10
-    assert F.SUPERSET["cap"] == 1000
-
-
-def test_r3_dynamic_margin_logic():
-    # Construct a Group test case mirroring AGY1 test cases
-    # S1-1: 3 candidates [0.95, 0.94, 0.70] -> floor=0.5, margin=0.2 -> thresh=max(0.5, 0.75)=0.75 -> keeps 2
-    # S1-2: 2 candidates [0.40, 0.30] -> top=0.40 < 0.50 -> keeps 0
-    # S1-3: 1 candidate [0.80] -> top=0.80 -> thresh=0.60 -> keeps 1
-    df = pd.DataFrame({
-        "q": [0, 0, 0, 1, 1, 2],
-        "code": [10, 11, 12, 13, 14, 15],
-        "p": [0.95, 0.94, 0.70, 0.40, 0.30, 0.80],
-        "label": [1, 1, 0, 0, 0, 1],
-    })
-    q_ids = np.array([0, 1, 2])
-    truth_n = np.array([2, 0, 1])
-
-    grp = Group(df, q_ids, truth_n)
-    
-    sel = grp.decide("r3", {"floor": 0.5, "margin": 0.2})
-    
-    # Check selection:
-    # Sorted order per group:
-    # q=0: 0.95 (True), 0.94 (True), 0.70 (False)
-    # q=1: 0.40 (False), 0.30 (False)
-    # q=2: 0.80 (True)
-    expected_sel = np.array([True, True, False, False, False, True])
-    assert np.array_equal(sel, expected_sel)
-    
-    # Score calculation
-    f05, _ = grp.score(sel)
-    assert f05 == 1.0  # All 3 S1s achieve perfect F0.5
+def test_no_h4_path_uses_r3():
+    for rel in ("experiments/agy2_pipeline.py", "experiments/agy2_pipeline_merge.py", "experiments/agy2_pipeline_freeze.py"):
+        src = (ROOT / rel).read_text().lower()
+        assert "dynamic_margin" not in src and '"r3"' not in src, rel
+    cfg = ROOT / "experiments" / "configs" / "h4_frozen.json"
+    if cfg.is_file():
+        c = json.loads(cfg.read_text())
+        assert c["candidate"]["name"] == "B2"
+        assert not c["set_rules"]["thr_t"] and not c["set_rules"]["topn_n"] and not c["set_rules"]["gap_t"]
+        assert c["set_rules"]["expF_s"], "expected-F0.5 must be the only decision family"
+        assert not any("r3" in k for k in c["set_rules"])

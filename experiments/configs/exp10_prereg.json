@@ -1,0 +1,53 @@
+{
+  "experiment": "agy2-er-010-cache-checks",
+  "status": "pre-registered before any exp10 model was trained",
+  "base": {
+    "frozen_config": "experiments/configs/exp7_h3_frozen.json",
+    "cache": "Kaggle kernel output akshayalgox/amlc26-exp7-h1-dump (version 2): h1_matcher_oof.parquet, h1_queries.parquet, h1_truth.parquet",
+    "expected_rows": 3999866,
+    "expected_selected": 149956,
+    "expected_dev_oof_macro_f05": 0.923869046,
+    "rebuilt": "nothing upstream of the matcher: retrieval, TF-IDF, candidate pool, parsing, pruner and exp7 pair features all come from the cache"
+  },
+  "folds": "exp7 folds (salt amlc26-exp7-fold-v1, 5 folds) and exp7 early-stopping subset, recomputed from s1_id and asserted equal to the cached fold column",
+  "row_order": "exp7 matcher row order = sort by (q, prune_rank); B0 must reproduce the cached OOF p (max abs diff reported)",
+  "lightgbm": {
+    "learning_rate": 0.08,
+    "num_leaves": 63,
+    "min_data_in_leaf": 100,
+    "feature_fraction": 0.9,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 1,
+    "lambda_l2": 1.0,
+    "max_bin": 127,
+    "seed": 42,
+    "early_stopping": 50,
+    "num_threads": "os.cpu_count() (4 on Kaggle CPU, as in exp7)"
+  },
+  "arms": {
+    "B2": "anchor: exp9 B2 recipe, must reproduce 0.9394136402248061 exactly",
+    "B2nc": "B2 minus the `country` feature (country-agnostic model for unseen France)",
+    "B2t40": "B2 on rows with prune_rank <= 40 (Top-40 budget)",
+    "B2lc50": "B2 trained on a fixed 50% of training S1 per fold (sha256('amlc26-exp10-lc|'+s1_id) % 100 < 50)",
+    "B2lc25": "same, 25%"
+  },
+  "decision_rule": "exp7 family and grids, selected per arm on DEV cross-fitted OOF only (as exp9)",
+  "decisions": {
+    "anchor_b2_h1_oof": 0.9394136402248061,
+    "noninferiority_margin": 0.0005,
+    "max_category_drop": 0.002,
+    "categories": [
+      "singleton",
+      "card1",
+      "card2_5",
+      "card6p",
+      "US",
+      "India"
+    ],
+    "min_gain_per_doubling": 0.003,
+    "country_agnostic_for_h4": "adopt B2nc for H4 iff delta >= -0.0005 and no category drops > 0.002",
+    "top40_budget_for_h4": "adopt Top-40 iff delta >= -0.0005 and no category drops > 0.002",
+    "more_training_s1": "plan a larger-training run iff the 20k->40k gain >= 0.003 (a doubling)"
+  },
+  "holdouts": "H2, H3 and H4 are not read; H3 + H4 sealed in the store"
+}

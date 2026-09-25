@@ -440,3 +440,32 @@ Decision:
 
 Next:
 - Operator approval for the H4 freeze and run. The Romanization lane needs pair persistence and refitted statistics before a downstream test.
+
+## [2026-09-25 18:50 IST]
+
+Task:
+- Pre-H4 cleanup and production test-mode pipeline (code + synthetic tests; no real-data compute).
+
+Files changed:
+- New: experiments/agy2_pipeline.py, agy2_pipeline_merge.py, agy2_pipeline_freeze.py, agy2_exp10_cache_checks.py; experiments/configs/h4_frozen.json, exp10_prereg.json; scripts/build_submission_package.py; packaging/{README.md,requirements.txt}; docs/PIPELINE_RUNBOOK.md; tests/{test_pipeline.py,pipeline_synth.py,test_h4_integrity.py,test_package.py}.
+- Modified: experiments/agy2_exp8_decide.py (R3 opt-in only), agy2_exp8_prep_h4.py (R3 / superset freeze retired), .gitignore (label and scratch files), RETRIEVAL_REPORT.md (SUPERSEDED banner). tests/test_h4_r3.py removed (replaced by test_h4_integrity.py).
+
+Experiment:
+- Synthetic end-to-end only:
+  - the pipeline in h4 mode is identical to the exp9 H4 reference (selection and reports);
+  - B2 features match the exp9 cache row by row;
+  - sharding is exact;
+  - the organiser validator passes;
+  - fail-closed on module hash, export tamper and missing shard.
+
+Result:
+- 99/99 tests pass. The canonical config pins 12 modules (pipeline sha 55dde7d4…): B2, expected-F0.5 only, stats exclude H2/H3/H4.
+
+Commit:
+- not committed (awaiting operator approval of the commit set).
+
+Decision:
+- H4 stays blocked until the commit and the exp10 decision (country-agnostic / Top-40 / learning curve), then re-freeze.
+
+Next:
+- exp10 on Kaggle (~1.2 h, cache only) -> freeze -> H4 + export -> test shards -> merge -> package.

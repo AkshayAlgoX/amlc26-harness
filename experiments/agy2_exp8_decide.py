@@ -113,8 +113,9 @@ def grids(rules_cfg, m_dev, gates):
     g = {"thr": [{"t": t} for t in R.get("thr_t", [])],
          "topn": [{"n": n, "t": t} for n in R.get("topn_n", []) for t in R.get("topn_t", [])],
          "gap": [{"t": t, "g": g2} for t in R.get("gap_t", []) for g2 in R.get("gap_g", [])],
-         "expF": [{"m": mm, "s": s} for mm in (0.0, m_dev) for s in R.get("expF_s", [])],
-         "r3": [{"floor": fl, "margin": mg} for fl in R.get("r3_floor", [0.4, 0.45, 0.5, 0.55, 0.6]) for mg in R.get("r3_margin", [0.05, 0.1, 0.15, 0.2, 0.25])]}
+         "expF": [{"m": mm, "s": s} for mm in (0.0, m_dev) for s in R.get("expF_s", [])]}
+    if R.get("r3_floor") and R.get("r3_margin"):   # RETIRED: R3 evidence was invalid (subsampled-train scoring); opt-in only
+        g["r3"] = [{"floor": fl, "margin": mg} for fl in R["r3_floor"] for mg in R["r3_margin"]]
     for rule in ("thr", "topn", "gap", "r3"):
         if rule in g:
             g[rule] = [{**prm, "s": s} for prm in g[rule] for s in gates]

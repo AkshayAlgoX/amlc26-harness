@@ -1,4 +1,9 @@
-"""AMLC26 exp8 PREP: Validation of H4 Holdout for Unbiased R3 Decision Layer Evaluation.
+"""AMLC26 exp8 PREP: derivation and verification of the H4 holdout (IDs only).
+
+RETIRED (2026-09-25): the R3 decision-rule freeze and the exp8 retrieval-superset freeze that this script used to
+record. R3's supporting evaluation was invalid (scored on a negative-subsampled training frame) and R3 lost to the
+expected-F0.5 rule on H1 OOF (-0.0037, 5/5 folds). The only H4 configuration is experiments/configs/h4_frozen.json
+(B2 + expected-F0.5, experiments/agy2_pipeline.py). Items 6-8 below are historical.
 
 Objective:
   1. H4 S1 ID list derivation and SHA-256 verification (50,000 IDs, salt 'amlc26-h4-holdout-v1').
@@ -45,19 +50,7 @@ H4_SALT = ENV("H4_SALT", "amlc26-h4-holdout-v1")
 HOLDOUT_N = 50000
 EXPECTED_H4_SHA = "237a24bb646ac3dd790c01718bf9f1c5226ecdcffec4cfa65b9d169a37ea3a0a"
 
-R3_FROZEN_PARAMS = {
-    "rule": "r3",
-    "floor": 0.5,
-    "margin": 0.2,
-    "conflict": "none",
-}
-
-RETRIEVAL_FROZEN_SETTINGS = {
-    "k_fwd": 300,
-    "rev_k": 10,
-    "cap": 1000,
-    "exact_shard_merge": True,
-}
+H4_CONFIG = "experiments/configs/h4_frozen.json"      # the ONLY H4 configuration (B2 + expected-F0.5)
 
 
 def sha256_file(p: Path) -> str:
@@ -73,7 +66,7 @@ def salted_holdout(all_ids: list[str], excluded: set[str], n: int, salt: str) ->
 
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    report = {"h4": {}, "retrieval_frozen": RETRIEVAL_FROZEN_SETTINGS, "r3_frozen": R3_FROZEN_PARAMS}
+    report = {"h4": {}, "h4_config": H4_CONFIG, "retired": ["r3_decision_freeze", "exp8_retrieval_superset_freeze"]}
 
     # 1. Verify prior holdout files
     prior_sets = {}

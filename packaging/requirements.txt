@@ -1,0 +1,8 @@
+# Runtime of the AMLC26 entity-resolution pipeline (pinned to the Kaggle CPU image used for every measured run).
+numpy==2.0.2
+pandas==2.3.3
+scipy==1.16.3
+scikit-learn==1.6.1
+lightgbm==4.6.0
+numba==0.60.0        # Jaro-Winkler kernel (a slower pure-Python fallback exists)
+pyarrow==24.0.0      # parquet artifacts and shard outputs

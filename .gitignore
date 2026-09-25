@@ -12,3 +12,17 @@ __pycache__/
 .venv
 *hashes.txt
 output/
+
+# --- AMLC26: development-only / label-derived files (never commit, never package) ---
+/data/*.parquet
+/data/*.json.gz
+/data/*.b64
+/data/val_*.tsv
+/kaggle_run.log
+/patch*.py
+/clean*.py
+/time_*.py
+/test_duckdb.py
+/expected/agy2_exp9_h4_frozen.json
+experiments/agy2_romanization_benchmark_kaggle.py
+experiments/agy2_romanization_fast_kaggle.py

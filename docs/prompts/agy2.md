@@ -418,3 +418,29 @@ Related experiment:
 
 Related commit:
 - df2091d, 9a44e20
+
+## [2026-09-25 18:50 IST — full cleanup + test-mode pipeline + second ceiling hunt]
+
+Task:
+- Remove every procedural blocker before H4 and build the missing test-mode submission pipeline. Then independently re-rank the score-ceiling opportunities. No heavy compute, no H4, no commits.
+
+Prompt summary:
+- H4 freeze: B2 + expected-F0.5 only, canonical path, pinned hashes, parity test, fail-closed.
+- Deterministic country encoding with unseen France; hygiene; dependencies and packaging.
+- Test mode: 1.73M S1, sharded, global conflict resolution, validators; the C0-C6 artifact graph; exact speed-ups only.
+- Phase 2: training scale, pruner, B2 FN, singleton/single-match, India, France, Romanization, retrieval, architecture, graph, test scaling.
+
+Expected output:
+- Fixes, files, tests, blockers, H4 status, ranked ceiling opportunities, one pre-H4 experiment with exact files and commands.
+
+Actual result:
+- Live checks: all Kaggle kernels COMPLETE; none started after 14:44 IST; the "corrected Romanization Kaggle job" never ran. France = 15.0% of test S1 (259,452) and absent from training. Training GT is one-to-one (7,638,365 links, 0 repeated targets).
+- Built experiments/agy2_pipeline.py (h4 + test modes; derived by anchored edits from the validated exp9 H4 script), agy2_pipeline_merge.py, agy2_pipeline_freeze.py, configs/h4_frozen.json, scripts/build_submission_package.py, packaging/, docs/PIPELINE_RUNBOOK.md.
+- Built exp10 (agy2_exp10_cache_checks.py + configs/exp10_prereg.json; Kaggle kernel files prepared, not pushed).
+- Tests: 99 passed locally under a 3 GB cap (the new pipeline tests use synthetic data only).
+
+Related experiment:
+- agy2-er-010 (pipeline), agy2-er-010-cache-checks (prepared)
+
+Related commit:
+- none (the commit set is proposed to the operator, not committed)

@@ -1,3 +1,5 @@
+> **SUPERSEDED / INVALID (2026-09-25).** Numbers in this report come from exp4, which classified S2/S3 by ID magnitude (source bug, fixed in `src/er/ids.py`), ranked reverse retrieval only against the holdout and fitted TF-IDF on the holdout. Do not cite. Current validated results: exp7 (H3 macro F0.5 0.923461) and exp9 (B2 H1 OOF 0.939414); see `docs/contributions/agy2.md` and `docs/PIPELINE_RUNBOOK.md`.
+
 # AMLC26 — Fresh Holdout Retrieval Validation Report
 
 **Date:** 2026-09-25 05:10:43 IST  
