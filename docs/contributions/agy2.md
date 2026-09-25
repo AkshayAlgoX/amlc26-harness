@@ -493,3 +493,56 @@ Decision:
 
 Next:
 - After exp10: re-freeze -> bundle/kernels -> H4 -> test shards -> merge -> documentation/package.
+
+## [2026-09-25 20:25 IST]
+
+Task:
+- exp10 pre-registered cache checks (measured, H1 cross-fitted OOF, exp7 folds; no H2/H3/H4).
+
+Files changed:
+- docs only (this entry).
+
+Experiment:
+- agy2-er-010-cache-checks on commit 75c82b7; artifacts in the Kaggle output (exp10_store: v0/c0/c4 + c5 per arm with fold models) and locally at ~/amlc26-kaggle-refresh/exp10/out/exp10/.
+
+Result (macro F0.5, H1 OOF; delta vs B2; folds better):
+- B2 0.939414: the anchor, reproduced exactly.
+- B2nc 0.938754 (-0.00066; 1/5). Single-match -0.0118, singletons +0.0195.
+- B2t40 0.939710 (+0.00030; 4/5). Single-match -0.0111, singletons +0.0244.
+- B2lc50 0.935064 (-0.00435; 0/5). B2lc25 0.930947 (-0.00847; 0/5).
+- Gain per doubling of training S1: 10k->20k +0.00412, 20k->40k +0.00435.
+
+Commit:
+- none (docs appended; no code change).
+
+Decision (pre-registered rules):
+- country_agnostic_for_h4 = false (delta beyond -0.0005 and single-match drop > 0.002). Keep `country` in B2.
+- top40_budget_for_h4 = false (single-match drop 0.011 > 0.002). Keep Top-80.
+- more_training_s1_run_justified = true (20k->40k gain 0.00435 >= 0.003).
+
+Next:
+- Operator decision on training scale for the H4 candidate (see report). H4 is not launched.
+
+## [2026-09-25 20:40 IST]
+
+Task:
+- Gated extra-training option in the freeze + canonical re-freeze.
+
+Files changed:
+- experiments/agy2_pipeline.py (extra_dev validation + meta), agy2_pipeline_freeze.py (--extra-train gated on exp10), configs/h4_frozen.json (re-frozen), tests/{test_pipeline_hardening.py,test_h4_integrity.py}, docs/PIPELINE_RUNBOOK.md.
+
+Experiment:
+- none run (synthetic test: the extra S1 join the training group only, disjoint from H0-H4, with a deterministic draw).
+
+Result:
+- 116/116 tests pass.
+- Canonical candidate: B2, Top-80, expected-F0.5, H1 + 50,000 extra training S1; exp10 results sha 0e96ee6b… pinned.
+
+Commit:
+- this commit.
+
+Decision:
+- This is the single H4 candidate.
+
+Next:
+- Operator approval to build the bundle and kernels from this commit and launch the H4 kernel.

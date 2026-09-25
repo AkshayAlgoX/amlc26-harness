@@ -238,3 +238,39 @@ def test_make_kernels_builds_fail_closed_chain(tmp_path):
     assert metas["merge"]["kernel_sources"][0].endswith("amlc26-p-h4") and len(metas["merge"]["kernel_sources"]) == 4
     stub = (tmp_path / "test_India" / "run.py").read_text()
     assert '"kind": "test_shards"' in stub and '"count": 6' in stub and head in stub
+
+
+def test_extra_train_gate_and_disjoint_draw(tmp_path):
+    from experiments.agy2_pipeline_freeze import FILES
+    with pytest.raises(SystemExit):                                   # no exp10 evidence
+        build_pipeline_config(ROOT, FILES, FAKE9, "x", extra_train=50000)
+    no = {"anchor": {"b2_reproduced": True}, "decisions": {"learning_curve": {"more_training_s1_run_justified": False}}}
+    with pytest.raises(SystemExit):
+        build_pipeline_config(ROOT, FILES, FAKE9, "x", extra_train=50000, exp10=no)
+    ok = {"anchor": {"b2_reproduced": True}, "decisions": {"learning_curve": {"more_training_s1_run_justified": True}}}
+    with pytest.raises(SystemExit):                                   # above the memory envelope
+        build_pipeline_config(ROOT, FILES, FAKE9, "x", extra_train=50001, exp10=ok)
+    c = build_pipeline_config(ROOT, FILES, FAKE9, "x", extra_train=50000, exp10=ok, exp10_sha="s")
+    assert c["extra_dev"] == {"n": 50000, "salt": "amlc26-extra-train-v1"} and c["candidate"]["name"] == "B2"
+    assert c["candidate"]["exp10_evidence"] == {"more_training_s1_run_justified": True}
+    # synthetic h4 run: extra S1 join the training group only, disjoint from H0-H4, deterministic
+    syn = pipeline_synth.make(tmp_path, n_train=3000, n_test=300)
+    cfg = cfg_for(syn)
+    cfg["extra_dev"] = {"n": 300, "salt": "amlc26-extra-train-v1"}
+    (tmp_path / "cfg.json").write_text(json.dumps(cfg))
+    run("experiments/agy2_pipeline.py", {"PIPELINE_SMOKE": "1", "PIPELINE_CONFIG": tmp_path / "cfg.json",
+                                         "DATA_ROOT": syn["data"], "PIPELINE_MODE": "h4", "OUT_DIR": tmp_path / "h4"})
+    res = json.loads((tmp_path / "h4" / "pipeline_h4_results.json").read_text())
+    h1 = len(Path(syn["files"]["H1"]).read_text().split())
+    assert res["meta"]["extra_train_s1"] == 300 and res["meta"]["dev_s1"] == h1 + 300
+    assert res["meta"]["h4_s1"] == len(Path(syn["files"]["H4"]).read_text().split())
+    from experiments.agy2_exp7_prep_h3 import salted_holdout
+    s1 = pd.read_csv(syn["data"] / "train_source1.tsv", sep="\t", dtype=str, keep_default_na=False).entity_id.tolist()
+    held = set().union(*(set(Path(syn["files"][k]).read_text().split()) for k in ("H0", "H1", "H2", "H3", "H4")))
+    extra = salted_holdout(s1, held, 300, "amlc26-extra-train-v1")
+    assert not (set(extra) & held)
+    import hashlib as _h
+    assert res["meta"]["extra_train_sha256"] == _h.sha256("\n".join(extra).encode()).hexdigest()
+    mf = rd(tmp_path / "h4" / "artifacts" / "c4c5_matcher_rows.parquet")
+    assert set(mf[mf.g == 1].s1_id) <= set(Path(syn["files"]["H4"]).read_text().split())   # extra never in H4 group
+    assert set(extra) & set(mf[mf.g == 0].s1_id)                                         # extra used for training

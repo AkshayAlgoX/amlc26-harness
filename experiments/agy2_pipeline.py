@@ -55,6 +55,7 @@ COUNTRY_CODE = {"India": 0.0, "US": 1.0}   # == exp7/exp9 enumerate(sorted({"Ind
 ALLOWED_DROP = {"country"}                   # B2nc = drop_features ["country"] from BOTH pruner and matcher
 FOLD_CONTRACT = ("amlc26-exp7-fold-v1", 5)
 BUDGETS_ALLOWED = (40, 80)
+MAX_EXTRA_TRAIN = 50000                      # H1 50k + extra 50k + H4 50k = 150k queries = the exp7 memory envelope
 from experiments import agy2_exp9_features as F9  # noqa: E402
 from experiments import agy2_exp8_store as ST  # noqa: E402  (parquet I/O; S is the selected rule below)
 DATA_ROOT = Path(ENV("DATA_ROOT", "/kaggle/input/datasets/akshayalgox/amlc26-2026-official-data-v2"))
@@ -268,9 +269,15 @@ def main():
         log("groups verified: DEV=H1, H4 disjoint from H0-H3 and re-derived exactly")
         if cfg.get("extra_dev"):                              # optional extra TRAINING S1, disjoint from every holdout
             xd = cfg["extra_dev"]
+            if set(xd) != {"n", "salt"} or not isinstance(xd["n"], int) or xd["n"] <= 0 or not xd["salt"]:
+                raise SystemExit("FAIL-CLOSED: malformed extra_dev")
+            if xd["n"] > MAX_EXTRA_TRAIN and not SMOKE:
+                raise SystemExit("FAIL-CLOSED: extra_dev above the validated memory envelope")
             extra = salted_holdout(s1_ids, set(ids_dev) | set(ids_h4) | set().union(*prior.values()), xd["n"], xd["salt"])
             assert not (set(extra) & (set(ids_h4) | set().union(*prior.values())))
             ids_dev = ids_dev + extra
+            res["meta"]["extra_train_s1"] = len(extra)
+            res["meta"]["extra_train_sha256"] = hashlib.sha256("\n".join(extra).encode()).hexdigest()
             log(f"extra training S1: {len(extra):,} (salt {xd['salt']})")
         Q = ids_dev + (ids_h4 if MODE == "h4" else [])
         nq = len(Q)

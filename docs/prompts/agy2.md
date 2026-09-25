@@ -468,3 +468,48 @@ Related experiment:
 
 Related commit:
 - this commit
+
+## [2026-09-25 20:25 IST — exp10 results]
+
+Task:
+- Report the pre-registered exp10 cache checks (commit 75c82b7) and recommend the one H4 candidate. H4 not launched.
+
+Prompt summary:
+- Anchor reproduction, country-agnostic B2 vs B2, Top-40, learning curve, pre-registered decisions, artifacts.
+
+Expected output:
+- Measured arms + decisions + one candidate.
+
+Actual result:
+- Kaggle akshayalgox/amlc26-exp10-cache-checks: COMPLETE, exit 0, tests 99/99, 65.7 min, peak 4.05 GB.
+- Anchor B2 = 0.9394136402248061 (exact).
+- Decisions: country-agnostic false, Top-40 false, larger-training run justified (true). See contributions.
+
+Related experiment:
+- agy2-er-010-cache-checks
+
+Related commit:
+- 75c82b7 (code); no new code in this step
+
+## [2026-09-25 20:40 IST — freeze --extra-train]
+
+Task:
+- Add --extra-train to the freeze, re-freeze, test and commit; do not launch H4.
+
+Prompt summary:
+- Implement the pre-registered exp10 learning-curve consequence in the canonical H4 configuration.
+
+Expected output:
+- Gated option, re-frozen canonical config, passing tests, commit.
+
+Actual result:
+- --extra-train N (<= 50,000) is refused unless exp10 shows the anchor reproduced and more_training_s1_run_justified true.
+- The pipeline validates extra_dev (fail-closed) and records the draw's size and sha256.
+- Canonical config re-frozen: B2, Top-80, expected-F0.5, H1 + 50,000 extra training S1.
+- 116 tests pass (synthetic data, 3 GB cap).
+
+Related experiment:
+- agy2-er-010 (freeze only; H4 not launched)
+
+Related commit:
+- this commit

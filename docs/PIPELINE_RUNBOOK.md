@@ -134,3 +134,17 @@ and holdout ID lists can never enter it; this is covered by `tests/test_package.
 5. Fill in `docs/Documentation_AMLC26.md`, build the package, and hand over to the captain for upload.
 6. Only if time remains: cached ceiling experiments (mining → India features; seed floor; lanes via dev mode).
    Any change adopted after H4 is backed only by H1 out-of-fold evidence.
+
+## H4 candidate after exp10 (frozen 2026-09-25 20:40 IST)
+- exp10 (pre-registered, commit 75c82b7):
+  - B2 anchor reproduced exactly;
+  - country-agnostic rejected (−0.00066, single-match −0.0118);
+  - Top-40 rejected (single-match −0.0111);
+  - learning curve +0.0041 / +0.0043 per doubling of training S1, so a larger training set is justified.
+- Canonical `h4_frozen.json`: **B2, Top-80, expected-F0.5, `country` kept, trained on H1 + 50,000 extra
+  training S1** (`extra_dev` = {n: 50000, salt: `amlc26-extra-train-v1`}; salted SHA-256 draw disjoint from
+  H0–H4; the draw's sha256 is recorded in the results).
+  - The freeze refuses `--extra-train` without the exp10 learning-curve decision, and above 50,000.
+  - The H4 run queries 150k S1 (100k training + 50k H4), which is the exp7 envelope (17.2 GB).
+  - The expected gain from the larger training set is an extrapolation of the measured slope, not a measurement;
+    H4 is its first fresh test.

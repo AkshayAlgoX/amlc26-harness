@@ -77,6 +77,9 @@ def test_no_h4_path_uses_r3():
         if c["candidate"]["name"] == "B2nc" or c["budget"]["top_n"] == 40:
             assert c["candidate"]["exp10_evidence"], "B2nc / Top-40 require pre-registered exp10 evidence"
         assert c["drop_features"] == (["country"] if c["candidate"]["name"] == "B2nc" else [])
+        if c.get("extra_dev"):
+            assert c["candidate"]["exp10_evidence"].get("more_training_s1_run_justified") is True
+            assert 0 < c["extra_dev"]["n"] <= 50000 and c["extra_dev"]["salt"]
         for stage in ("pruner", "matcher"):
             assert ("country" in c[stage]["features"]) == (c["candidate"]["name"] == "B2")
         assert not c["set_rules"]["thr_t"] and not c["set_rules"]["topn_n"] and not c["set_rules"]["gap_t"]
