@@ -226,12 +226,33 @@ def test_pruner_from_pool_reproduces_stored_scores(pw, tmp_path):
 
 
 def test_make_kernels_builds_fail_closed_chain(tmp_path):
+    """In a git checkout: build the real bundle + kernels from HEAD. In an exported bundle (git archive, no .git, e.g.
+    inside a Kaggle kernel): validate the bundled commit manifest and the kernel generator without git."""
+    sys.path.insert(0, str(ROOT / "scripts" / "kaggle"))
+    import make_kernels as MK
+    if not (ROOT / ".git").exists():
+        commit = (ROOT / "BUNDLE_COMMIT").read_text().strip()
+        assert len(commit) == 40 and all(ch in "0123456789abcdef" for ch in commit), "malformed BUNDLE_COMMIT"
+        assert not [p for p in ROOT.rglob("*") if p.is_symlink()], "symlink inside the exported bundle"
+        cfg = json.loads((ROOT / "experiments/configs/h4_frozen.json").read_text())
+        assert all(sha256_file(ROOT / m) == h for m, h in cfg["code_sha256"].items()), "pinned module mismatch in bundle"
+        job = {"bundle_commit": commit, "config_sha256": sha256_file(ROOT / "experiments/configs/h4_frozen.json"),
+               "kind": "test_shards", "shards": {"country": "India", "count": 6, "indices": list(range(6))}}
+        kid = MK.kernel(tmp_path, "test_India", "amlc26-p-test-india", job, "akshayalgox/amlc26-agy2-test", ["amlc26-p-h4"])
+        meta = json.loads((tmp_path / "test_India" / "kernel-metadata.json").read_text())
+        assert kid.endswith("amlc26-p-test-india") and not meta["enable_internet"] and not meta["enable_gpu"]
+        stub = (tmp_path / "test_India" / "run.py").read_text()
+        assert '"kind": "test_shards"' in stub and '"count": 6' in stub and commit in stub
+        return
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     if subprocess.run(["git", "cat-file", "-e", f"{head}:scripts/kaggle/kaggle_job.py"], cwd=ROOT).returncode != 0:
         pytest.skip("kernel generator not committed yet (archives the committed tree)")
     subprocess.run([sys.executable, str(ROOT / "scripts/kaggle/make_kernels.py"), "--commit", head,
                     "--bundle-slug", "akshayalgox/amlc26-agy2-test", "--out", str(tmp_path)], check=True, cwd=ROOT)
-    assert (tmp_path / "bundle_stage" / "amlc26-agy2" / "BUNDLE_COMMIT").read_text().strip() == head
+    stage = tmp_path / "bundle_stage" / "amlc26-agy2"
+    assert (stage / "BUNDLE_COMMIT").read_text().strip() == head
+    assert not [p for p in stage.rglob("*") if p.is_symlink()], "symlink exported into the bundle"
+    assert (stage / "experiments/configs/h4_frozen.json").is_file() and not (stage / "artifacts").exists()
     metas = {d.name: json.loads((d / "kernel-metadata.json").read_text()) for d in tmp_path.iterdir() if (d / "run.py").is_file()}
     assert set(metas) == {"h4", "test_US", "test_India", "test_France", "merge"}
     assert all(not m["enable_internet"] and not m["enable_gpu"] for m in metas.values())

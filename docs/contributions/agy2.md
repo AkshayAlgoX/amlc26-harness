@@ -546,3 +546,52 @@ Decision:
 
 Next:
 - Operator approval to build the bundle and kernels from this commit and launch the H4 kernel.
+
+## [2026-09-25 20:55 IST]
+
+Task:
+- H4 launch (akshayalgox/amlc26-p-h4 v1; bundle 3211c98; config a2447ccc...).
+
+Files changed:
+- docs only (this entry).
+
+Experiment:
+- H4 kernel launched 20:42:57 IST; status ERROR at 20:53 (fail-closed at the repository-test step).
+
+Result:
+- Tests on Kaggle: 115 passed, 1 failed. tests/test_pipeline_hardening.py::test_make_kernels_builds_fail_closed_chain calls `git rev-parse HEAD`, but the bundle is a git archive with no .git (exit 128).
+- The pipeline never started. No data was loaded, H4 was not queried or scored, and no labels were read.
+
+Commit:
+- none.
+
+Decision:
+- H4 is NOT consumed. Needs a test-only fix (skip when not inside a git checkout), plus the make_kernels symlink drop, then a new commit/bundle and re-launch with captain approval. The pinned modules and h4_frozen.json are unaffected.
+
+Next:
+- Await captain approval for the fix + re-launch.
+
+## [2026-09-25 21:10 IST]
+
+Task:
+- Repair the H4 v1 fail-closed cause (test assumed a git checkout) + make_kernels link exclusion.
+
+Files changed:
+- tests/test_pipeline_hardening.py (test_make_kernels_builds_fail_closed_chain: git branch unchanged + asserts no exported links; bundle branch validates BUNDLE_COMMIT format, no links and the pinned module hashes, and builds a stub with make_kernels.kernel()).
+- scripts/kaggle/make_kernels.py (symlink / hard-link tar members skipped, never followed; asserted absent).
+- docs (these entries).
+
+Experiment:
+- none.
+
+Result:
+- 116/116 locally; exported-bundle branch verified in a no-.git copy.
+
+Commit:
+- this commit.
+
+Decision:
+- Re-launch only akshayalgox/amlc26-p-h4 from this commit.
+
+Next:
+- Monitor H4; no test shards or merge.

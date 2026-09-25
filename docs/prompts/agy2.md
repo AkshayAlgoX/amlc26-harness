@@ -513,3 +513,25 @@ Related experiment:
 
 Related commit:
 - this commit
+
+## [2026-09-25 21:10 IST — repair H4 packaging test, re-launch H4]
+
+Task:
+- Fix the one failing test (no .git in the exported bundle) and make_kernels symlink handling; commit; rebuild; re-launch only H4.
+
+Prompt summary:
+- Git-checkout branch keeps the commit verification; the exported-bundle branch validates BUNDLE_COMMIT and pinned hashes; links are never exported. The pipeline's fail-closed protections are not weakened. The H4 config is unchanged.
+
+Expected output:
+- New commit, tests, bundle validation, launch.
+
+Actual result:
+- 116/116 locally (3 GB cap).
+- The fixed test also passes in a simulated no-.git export.
+- h4_frozen.json and the pinned modules are unchanged.
+
+Related experiment:
+- agy2-er-010 H4 (v2 launch)
+
+Related commit:
+- this commit

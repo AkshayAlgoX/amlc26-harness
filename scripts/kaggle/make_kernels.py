@@ -1,7 +1,8 @@
 """Generate (never push) the Kaggle kernel directories for one exact code commit.
 
 usage: python scripts/kaggle/make_kernels.py --commit <sha> --bundle-slug akshayalgox/<code-dataset> --out <dir>
-Writes <out>/{bundle_stage,h4,test_US,test_India,test_France,merge}. bundle_stage = `git archive <commit>` + BUNDLE_COMMIT
+Writes <out>/{bundle_stage,h4,test_US,test_India,test_France,merge}. bundle_stage = `git archive <commit>` without any
+symlink / hard-link member (never followed, never exported) + BUNDLE_COMMIT
 + dataset-metadata.json. Each kernel dir = a stub run.py (locates the bundle under /kaggle/input/datasets, copies it,
 executes scripts/kaggle/kaggle_job.py with the embedded job) + kernel-metadata.json (CPU, internet off, private).
 Kernel dependency chain: h4 -> test_<country> (kernel_sources: h4) -> merge (kernel_sources: h4 + all test kernels).
@@ -55,7 +56,11 @@ def main():
     stage = out / "bundle_stage" / "amlc26-agy2"
     stage.mkdir(parents=True, exist_ok=True)
     tar = subprocess.check_output(["git", "archive", commit], cwd=REPO)
-    tarfile.open(fileobj=io.BytesIO(tar)).extractall(stage)
+    tf = tarfile.open(fileobj=io.BytesIO(tar))
+    members = [m for m in tf.getmembers() if not (m.issym() or m.islnk())]   # never export (local/dangling) links
+    skipped = sorted(m.name for m in tf.getmembers() if m.issym() or m.islnk())
+    tf.extractall(stage, members=members)
+    assert not [p for p in stage.rglob("*") if p.is_symlink()], "symlink leaked into the bundle"
     (stage / "BUNDLE_COMMIT").write_text(commit + "\n")
     (out / "bundle_stage" / "dataset-metadata.json").write_text(json.dumps(
         {"title": a.bundle_slug.split("/")[1], "id": a.bundle_slug, "licenses": [{"name": "other"}]}))
@@ -70,7 +75,8 @@ def main():
                a.bundle_slug, ["amlc26-p-h4"])
         tests.append(t)
     kernel(out, "merge", "amlc26-p-merge", {**base, "kind": "merge"}, a.bundle_slug, ["amlc26-p-h4"] + tests)
-    print(json.dumps({"commit": commit, "config_sha256": cfg_sha, "kernels": ["amlc26-p-h4"] + tests + ["amlc26-p-merge"]}))
+    print(json.dumps({"commit": commit, "config_sha256": cfg_sha, "skipped_links": skipped,
+                      "kernels": ["amlc26-p-h4"] + tests + ["amlc26-p-merge"]}))
 
 
 if __name__ == "__main__":
