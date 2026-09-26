@@ -68,7 +68,7 @@ def main(job: dict) -> int:
     commit = (REPO / "BUNDLE_COMMIT").read_text().strip() if (REPO / "BUNDLE_COMMIT").is_file() else ""
     if commit != job["bundle_commit"]:
         return fail(f"bundle commit {commit[:12]} != job {job['bundle_commit'][:12]}")
-    if sha(REPO / "experiments/configs/h4_frozen.json") != job["config_sha256"]:
+    if sha(REPO / "experiments/configs/h4_p2_frozen.json") != job["config_sha256"]:
         return fail("canonical config sha differs from the job")
     try:
         data = str(find_data_root())
@@ -83,7 +83,7 @@ def main(job: dict) -> int:
 
     kind = job["kind"]
     if kind in ("h4", "dev"):
-        rc = run([sys.executable, "experiments/agy2_pipeline.py"], dict(env, PIPELINE_MODE=kind, OUT_DIR=str(out)))
+        rc = run([sys.executable, "experiments/agy2_b2r_pipeline.py"], dict(env, PIPELINE_MODE=kind, OUT_DIR=str(out)))
         summary["steps"].append({kind: rc})
     elif kind == "test_shards":
         mans = [Path(p).parent for p in glob.glob(str(INPUT / "**" / "export/manifest.json"), recursive=True)]
@@ -92,7 +92,7 @@ def main(job: dict) -> int:
             return fail(f"expected exactly one H4 export, found {len(mans)}")
         sh = job["shards"]
         for i in sh["indices"]:
-            rc = run([sys.executable, "experiments/agy2_pipeline.py"],
+            rc = run([sys.executable, "experiments/agy2_b2r_pipeline.py"],
                      dict(env, PIPELINE_MODE="test", MODELS_DIR=str(mans[0]), SHARD_COUNTRY=sh["country"],
                           SHARD_INDEX=str(i), SHARD_COUNT=str(sh["count"]), OUT_DIR=str(out / "shards")))
             summary["steps"].append({f"shard_{sh['country']}_{i}of{sh['count']}": rc})
