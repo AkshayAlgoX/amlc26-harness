@@ -419,7 +419,7 @@ def main():
                     if hi >= 0:
                         add(int(hi), int(ca[r]), R5 | (R3 if rank <= 3 else 0) | (R1 if rank == 1 else 0),
                             rsc=float(sc), rrank=rank)
-                texts.clear(); codes.clear()
+                
         
         # Romanization Reverse TF-IDF
         non_ascii = np.array([is_non_ascii(rn) for rn in rawnames])
@@ -444,7 +444,7 @@ def main():
                         hi = hm[j]
                         if hi >= 0:
                             add(int(hi), int(ca_rom[r]), RROM5, rsc=float(sc), rrank=rank)
-        rawnames.clear()
+        texts.clear(); codes.clear(); rawnames.clear()
 
     tgt_frames = [load_source_tsv(find(f"{split}_source2.tsv")), load_source_tsv(find(f"{split}_source3.tsv"))]
     log(f"targets loaded (production loader): {sum(len(f) for f in tgt_frames):,}")
