@@ -75,24 +75,24 @@ def main():
     (stage / "BUNDLE_COMMIT").write_text(commit + "\n")
     (out / "bundle_stage" / "dataset-metadata.json").write_text(json.dumps(
         {"title": a.bundle_slug.split("/")[1], "id": a.bundle_slug, "licenses": [{"name": "other"}]}))
-    cfg_sha = hashlib.sha256((stage / "experiments/configs/h4_frozen.json").read_bytes()).hexdigest()
+    cfg_sha = hashlib.sha256((stage / "experiments/configs/h4_p2_frozen.json").read_bytes()).hexdigest()
     plan = json.loads((stage / "experiments/configs/test_shards.json").read_text())
     base = {"bundle_commit": commit, "config_sha256": cfg_sha}
-    ids = {"h4": kernel(out, "h4", "amlc26-p-h4", {**base, "kind": "h4"}, a.bundle_slug, [])}
+    ids = {"h4": kernel(out, "h4", "amlc26-p2-h4", {**base, "kind": "h4"}, a.bundle_slug, [])}
     tests = []
     for c, n in plan["shards"].items():
         for i in range(n):
-            t = f"amlc26-p-test-{c.lower()}-{i}"
+            t = f"amlc26-p2-test-{c.lower()}-{i}"
             kernel(out, f"test_{c}_{i}", t, {**base, "kind": "test_shards", "shards": {"country": c, "count": n, "indices": [i]}},
-                   a.bundle_slug, ["amlc26-p-h4"])
+                   a.bundle_slug, ["amlc26-p2-h4"])
             tests.append(t)
-    merge_sources = ["amlc26-p-h4"] + tests
+    merge_sources = ["amlc26-p2-h4"] + tests
     # Kaggle hard limit: 20 dataset + kernel sources per notebook.  Merge has 2 dataset_sources + len(merge_sources) kernel_sources.
     if 2 + len(merge_sources) > 20:
         import sys; sys.exit(f"FAIL-CLOSED: merge kernel would need {2 + len(merge_sources)} sources (max 20)")
-    kernel(out, "merge", "amlc26-p-merge", {**base, "kind": "merge"}, a.bundle_slug, merge_sources)
+    kernel(out, "merge", "amlc26-p2-merge", {**base, "kind": "merge"}, a.bundle_slug, merge_sources)
     print(json.dumps({"commit": commit, "config_sha256": cfg_sha, "skipped_links": skipped,
-                      "kernels": ["amlc26-p-h4"] + tests + ["amlc26-p-merge"]}))
+                      "kernels": ["amlc26-p2-h4"] + tests + ["amlc26-p2-merge"]}))
 
 
 if __name__ == "__main__":
