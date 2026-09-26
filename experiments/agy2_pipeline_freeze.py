@@ -108,7 +108,7 @@ def dev_config(cfg: dict, lanes=(), extra_dev=None) -> dict:
     lf = [f for ln in lanes for f in (f"flag_lane_{ln['name']}", f"lane_{ln['name']}_score", f"lane_{ln['name']}_rank")]
     drop = c.get("drop_features", [])
     c["pruner"]["features"] = [f for f in PR_FEATS + lf if f not in drop]
-    c["matcher"]["features"] = [f for f in PR_FEATS + lf + list(M_FEATS)[len(PR_FEATS):] + list(NEW_FEATURES) if f not in drop]
+    c["matcher"]["features"] = [f for f in PR_FEATS + lf + list(M_FEATS)[len(PR_FEATS):] + list(NEW_FEATURES) + R_FEATURES if f not in drop]
     if extra_dev:
         c["extra_dev"] = dict(extra_dev)
     return c
