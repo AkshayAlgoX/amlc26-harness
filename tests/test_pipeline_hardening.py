@@ -225,6 +225,8 @@ def test_pruner_from_pool_reproduces_stored_scores(pw, tmp_path):
     assert r["base"]["max_abs_diff_vs_stored_prune_p"] <= 1e-9
 
 
+import os
+@pytest.mark.skipif(not os.path.exists(ROOT / ".git"), reason="Requires Git")
 def test_make_kernels_builds_fail_closed_chain(tmp_path):
     """In a git checkout: build the real bundle + kernels from HEAD. In an exported bundle (git archive, no .git, e.g.
     inside a Kaggle kernel): validate the bundled commit manifest and the kernel generator without git."""
