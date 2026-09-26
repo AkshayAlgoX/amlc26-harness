@@ -206,7 +206,7 @@ def main():
     if not set(DROP) <= ALLOWED_DROP:
         raise SystemExit(f"FAIL-CLOSED: unsupported drop_features {DROP}")
     LANES = list(cfg.get("lanes", []))
-    if False:
+    if LANES and MODE != "dev":
         raise SystemExit("FAIL-CLOSED: retrieval lanes are development-only until validated (dev mode)")
     LANE_FEATS = [f for ln in LANES for f in (f"flag_lane_{ln['name']}", f"lane_{ln['name']}_score", f"lane_{ln['name']}_rank")]
     PR_RUN = [f for f in PR_FEATS + LANE_FEATS if f not in DROP]                     # pruner features
