@@ -180,7 +180,7 @@ def compute_r_features(
 
     if not nonascii_mask.any():
         dcov, djac = _compute_dict_features(q_raw_names, t_raw_names)
-    return kind, char3, jw, tokjacc, skeljacc_arr, skelcov_arr, dcov, djac
+        return kind, char3, jw, tokjacc, skeljacc_arr, skelcov_arr, dcov, djac
 
     indices = np.flatnonzero(nonascii_mask)
 
