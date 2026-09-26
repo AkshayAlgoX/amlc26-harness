@@ -89,7 +89,7 @@ def test_h4_and_test_mode_produce_identical_features_and_scores(pw):
     a = h4[h4.s1_id.isin(india)].set_index(["s1_id", "code"]).sort_index()
     b = tf[tf.s1_id.isin(set(a.index.get_level_values(0)))].set_index(["s1_id", "code"]).sort_index()
     assert len(a) > 0 and a.index.equals(b.index), "different candidate rows for the same S1"
-    assert len(feats) == 61
+    assert len(feats) == 69
     for f in feats + ["p"]:
         x, y = a[f].to_numpy(np.float64), b[f].to_numpy(np.float64)
         assert np.array_equal(np.isnan(x), np.isnan(y)) and np.array_equal(x[~np.isnan(x)], y[~np.isnan(y)]), f
