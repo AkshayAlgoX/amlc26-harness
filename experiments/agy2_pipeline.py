@@ -42,7 +42,7 @@ from src.er.ids import encode_target_id  # noqa: E402
 from src.er.loader import load_ground_truth_df, load_source_tsv  # noqa: E402
 
 ENV = os.environ.get
-CANONICAL_CONFIG = ROOT / "experiments" / "configs" / "h4_p2_frozen.json"
+CANONICAL_CONFIG = ROOT / "experiments" / "configs" / "h4_frozen.json"
 MODE = ENV("PIPELINE_MODE", "h4")
 SMOKE = ENV("PIPELINE_SMOKE", "0") == "1"                      # synthetic tests only
 # h4 / test read ONLY the canonical frozen config; dev experiments (and synthetic tests) may pass their own config
