@@ -64,11 +64,11 @@ DATA_ROOT = Path(ENV("DATA_ROOT", "/kaggle/input/datasets/akshayalgox/amlc26-202
 OUT_DIR = Path(ENV("OUT_DIR", "/kaggle/working/pipeline"))
 
 A, B, F100, F200, R1, R3, R5 = 1, 2, 4, 8, 16, 32, 64
-F40, RROM5 = 4096 * 2, 4096 * 4
+F40 = 4096 * 2
 B2U, B2C, B3U, B3C, B4U, B4C = 128, 256, 512, 1024, 2048, 4096
-BITS = {"A": A, "B": B, "F100": F100, "F40": F40, "F200": F200, "R5": R5, "RROM5": RROM5, "B2C": B2C, "B3C": B3C, "B4C": B4C}
+BITS = {"A": A, "B": B, "F100": F100, "F40": F40, "F200": F200, "R5": R5, "B2C": B2C, "B3C": B3C, "B4C": B4C}
 PR_FEATS = ["fwd_tfidf", "fwd_rank", "rev_tfidf", "rev_rank", "num_channels", "flag_A", "flag_B", "flag_F100",
-            "flag_R1", "flag_R5", "flag_RROM5", "flag_b2", "flag_b3", "flag_b4", "exact_name", "exact_addr", "country", "src_s3",
+            "flag_R1", "flag_R5", "flag_b2", "flag_b3", "flag_b4", "exact_name", "exact_addr", "country", "src_s3",
             "name_jacc", "name_cont", "addr_jacc", "digit_jacc", "num_match", "pin_match", "q_addr_missing",
             "t_addr_missing", "name_len_diff", "cands_s1", "fwd_ratio_best", "name_jacc_rank"]
 M_FEATS = PR_FEATS + ["prune_p", "prune_rank", "name_jw", "addr_jw", "name_cont_q", "name_cont_t", "name_len_ratio",
@@ -421,29 +421,6 @@ def main():
                             rsc=float(sc), rrank=rank)
                 
         
-        # Romanization Reverse TF-IDF
-        non_ascii = np.array([is_non_ascii(rn) for rn in rawnames])
-        if non_ascii.any():
-            trom = [romanize(rn) for rn, na in zip(rawnames, non_ascii) if na]
-            trom_codes = [codes[i] for i, na in enumerate(non_ascii) if na]
-            ca_rom = np.asarray(trom_codes, dtype=np.int64)
-            Xt_rom = V_rom[c].transform(trom).tocsr()
-            touch_rom = (Xt_rom @ XQ_rom_revT[c]).tocsr()
-            rows_rom = np.flatnonzero(np.diff(touch_rom.indptr))
-            for s0 in range(0, len(rows_rom), 2000):
-                rr = rows_rom[s0:s0 + 2000]
-                M = (Xt_rom[rr] @ XS1_rom_revT[c]).tocsr()
-                for k, r in enumerate(rr):
-                    a, b = M.indptr[k], M.indptr[k + 1]
-                    if a == b: continue
-                    v, cols = M.data[a:b], M.indices[a:b]
-                    if len(v) > 5:
-                        sel = np.argpartition(-v, 4)[:5]; v, cols = v[sel], cols[sel]
-                    order = np.argsort(-v)
-                    for rank, (j, sc) in enumerate(zip(cols[order], v[order]), 1):
-                        hi = hm[j]
-                        if hi >= 0:
-                            add(int(hi), int(ca_rom[r]), RROM5, rsc=float(sc), rrank=rank)
         texts.clear(); codes.clear(); rawnames.clear()
 
     tgt_frames = [load_source_tsv(find(f"{split}_source2.tsv")), load_source_tsv(find(f"{split}_source3.tsv"))]
@@ -534,9 +511,9 @@ def main():
         bits[m & ok] |= cb
     is_fwd = (bits & (F200 | F40)) > 0
     frank = np.where(is_fwd, rka, 9999).astype(np.int64)
-    rrank = np.where((bits & (R5 | RROM5)) > 0, rka, 99).astype(np.int64)
+    rrank = np.where((bits & R5) > 0, rka, 99).astype(np.int64)
     fsc = np.where(is_fwd, fsa, 0.0).astype(np.float32)
-    rsc = np.where((bits & (R5 | RROM5)) > 0, rsa, 0.0).astype(np.float32)
+    rsc = np.where((bits & R5) > 0, rsa, 0.0).astype(np.float32)
     pk = (qa << 32) | ta
     o = np.argsort(pk, kind="stable")
     pk, bits, frank, rrank, fsc, rsc = pk[o], bits[o], frank[o], rrank[o], fsc[o], rsc[o]
@@ -557,9 +534,9 @@ def main():
     P["fold"] = fold_q[P.q.values]
     P["is_s2"] = (P.code.values & 3) == 2
     for name_, bit in (("flag_A", A), ("flag_B", B), ("flag_F100", F100), ("flag_F200", F200), ("flag_R1", R1),
-                       ("flag_R5", R5), ("flag_RROM5", RROM5), ("flag_b2", B2C), ("flag_b3", B3C), ("flag_b4", B4C)):
+                       ("flag_R5", R5), ("flag_b2", B2C), ("flag_b3", B3C), ("flag_b4", B4C)):
         P[name_] = ((ub & bit) > 0).astype(np.int8)
-    P["num_channels"] = P[["flag_A", "flag_B", "flag_F200", "flag_R5", "flag_RROM5", "flag_b2", "flag_b3", "flag_b4"]].sum(axis=1).astype(np.int8)
+    P["num_channels"] = P[["flag_A", "flag_B", "flag_F200", "flag_R5", "flag_b2", "flag_b3", "flag_b4"]].sum(axis=1).astype(np.int8)
     P["fwd_tfidf"], P["fwd_rank"], P["rev_tfidf"], P["rev_rank"] = ufs, ufr.astype(np.int32), urs, urr.astype(np.int16)
     del upk, ub, ufr, urr, ufs, urs
     gc.collect()
@@ -586,7 +563,7 @@ def main():
             N = pd.DataFrame({"q": nq_, "code": nw.code.values.astype(np.int64)})
             N["label"] = np.isin(lk[~hit], truth_keys)
             N["g"] = grp_q[nq_]; N["fold"] = fold_q[nq_]; N["is_s2"] = (N.code.values & 3) == 2
-            for c_ in ("flag_A", "flag_B", "flag_F100", "flag_F200", "flag_R1", "flag_R5", "flag_RROM5", "flag_b2", "flag_b3", "flag_b4", "num_channels"):
+            for c_ in ("flag_A", "flag_B", "flag_F100", "flag_F200", "flag_R1", "flag_R5", "flag_b2", "flag_b3", "flag_b4", "num_channels"):
                 N[c_] = np.int8(0)
             N["fwd_tfidf"], N["fwd_rank"], N["rev_tfidf"], N["rev_rank"] = np.float32(0), np.int32(9999), np.float32(0), np.int16(99)
             for c_ in P.columns:
@@ -784,79 +761,7 @@ def main():
     log(f"matcher pairs {len(M):,} (DEV {int((M.g == 0).sum()):,}) | JW {JW_ENGINE}")
     M["p"], minfo = lgb_crossfit(M, M_RUN, MAT, "matcher")
 
-    # ---------------- stage 4.5: Stage-2 features
-    if "matcher_s2" in cfg:
-        t_s2 = time.time()
-        # M has "p", "q", "code", "is_s2", "t_idx"
-        M_s1 = M[["q", "p", "is_s2", "t_idx"]].copy()
-        M_s1["rk"] = M_s1.groupby("q", sort=False).p.rank(method="first", ascending=False) - 1
-        
-        top1 = M_s1[M_s1.rk == 0].set_index("q")
-        top2 = M_s1[M_s1.rk == 1].set_index("q")
-        
-        top1_score = top1.p
-        top2_score = top2.p.reindex(top1.index).fillna(0.0)
-        
-        M_q = M.q.values
-        
-        M["top1_score_gap"] = top1_score.reindex(M_q).values - M.p.values
-        M["top1_to_top2_ratio"] = (top1_score / np.maximum(top2_score, 1e-9)).reindex(M_q).values
-        
-        valid_anchor = top1_score >= 0.75
-        has_sa = valid_anchor.reindex(M_q).fillna(False).values
-        M["has_strong_anchor"] = has_sa.astype(np.int8)
-        
-        anchor_is_s2 = top1.is_s2.reindex(M_q).values
-        M["anchor_source"] = np.where(has_sa, anchor_is_s2.astype(np.int8), -1).astype(np.int8)
-        
-        M["sibling_source_complement"] = np.where(has_sa, (M.is_s2.values != anchor_is_s2).astype(np.int8), 0).astype(np.int8)
-        
-        anchor_t_idx = top1.t_idx.reindex(M_q).values
-        
-        idx_range = np.arange(len(M), dtype=np.int64)
-        anchor_names = [tname[j] if h else "" for j, h in zip(anchor_t_idx, has_sa)]
-        cand_names = [tname[j] for j in M.t_idx.values]
-        M["cand_to_anchor_name_jw"] = np.where(
-            has_sa,
-            jaro_winkler_pairs(cand_names, idx_range, anchor_names, idx_range),
-            np.nan
-        ).astype(np.float32)
-        
-        anchor_addrs = [taddr[j] if h else "" for j, h in zip(anchor_t_idx, has_sa)]
-        cand_addrs = [taddr[j] for j in M.t_idx.values]
-        M["cand_to_anchor_addr_jw"] = np.where(
-            has_sa,
-            jaro_winkler_pairs(cand_addrs, idx_range, anchor_addrs, idx_range),
-            np.nan
-        ).astype(np.float32)
-        
-        anchor_pins = [tpin[j] if h else "" for j, h in zip(anchor_t_idx, has_sa)]
-        cand_pins = [tpin[j] for j in M.t_idx.values]
-        pin_match = np.zeros(len(M), dtype=np.int8)
-        for r in range(len(M)):
-            if has_sa[r]:
-                pin_match[r] = 1 if (cand_pins[r] and cand_pins[r] == anchor_pins[r]) else 0
-            else:
-                pin_match[r] = -1
-        M["cand_to_anchor_pin_match"] = pin_match
-        
-        anchor_nums = [tnum[j] if h else "" for j, h in zip(anchor_t_idx, has_sa)]
-        cand_nums = [tnum[j] for j in M.t_idx.values]
-        num_match = np.zeros(len(M), dtype=np.int8)
-        for r in range(len(M)):
-            if has_sa[r]:
-                num_match[r] = 1 if (cand_nums[r] and cand_nums[r] == anchor_nums[r]) else 0
-            else:
-                num_match[r] = -1
-        M["cand_to_anchor_num_match"] = num_match
-        
-        log(f"Stage-2 features computed in {(time.time() - t_s2)/60:.1f} min")
-        
-        MAT_S2 = cfg["matcher_s2"]
-        M_S2_RUN = MAT_S2["features"]
-        M["p"], minfo_s2 = lgb_crossfit(M, M_S2_RUN, MAT_S2, "matcher_s2")
-        res["matcher_s2"] = minfo_s2
-        res["timing_min"]["matcher_s2"] = (time.time() - t_s2) / 60
+    
     if MODE == "test":
         tag = f"{SHARD_COUNTRY}_{SHARD_INDEX}of{SHARD_COUNT}"
         pos = {e: i for i, e in enumerate(s1_ids)}               # position in test_source1 (file order)
