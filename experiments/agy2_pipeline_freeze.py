@@ -24,7 +24,8 @@ sys.path.insert(0, str(ROOT))
 from experiments.agy2_exp7_prep_h3 import sha256_file  # noqa: E402
 from experiments.agy2_exp9_h4_freeze import build_h4  # noqa: E402
 from experiments.agy2_exp7_h3 import M_FEATS, PR_FEATS  # noqa: E402
-from experiments.agy2_exp9_features import NEW_FEATURES  # noqa: E402
+from experiments.agy2_exp9_features import NEW_FEATURES
+from experiments.agy2_x2_features import R_FEATURES  # noqa: E402
 
 PINNED_MODULES = [
     "experiments/agy2_pipeline.py", "experiments/agy2_pipeline_merge.py",
@@ -81,7 +82,7 @@ def build_pipeline_config(root: Path, files: dict, exp9: dict, exp9_sha: str, va
     drop = ["country"] if variant == "B2nc" else []
     cfg["drop_features"] = drop
     cfg["pruner"]["features"] = [f for f in PR_FEATS if f not in drop]
-        cfg["matcher"]["features"] = [f for f in list(M_FEATS) + list(NEW_FEATURES) + R_FEATURES if f not in drop]
+    cfg["matcher"]["features"] = [f for f in list(M_FEATS) + list(NEW_FEATURES) + R_FEATURES if f not in drop]
     if not smoke:
         cfg["budget"]["top_n"] = top_n
     cfg["candidate"]["name"] = variant

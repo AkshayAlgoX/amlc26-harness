@@ -68,7 +68,7 @@ F40, RROM5 = 4096 * 2, 4096 * 4
 B2U, B2C, B3U, B3C, B4U, B4C = 128, 256, 512, 1024, 2048, 4096
 BITS = {"A": A, "B": B, "F100": F100, "F40": F40, "F200": F200, "R5": R5, "RROM5": RROM5, "B2C": B2C, "B3C": B3C, "B4C": B4C}
 PR_FEATS = ["fwd_tfidf", "fwd_rank", "rev_tfidf", "rev_rank", "num_channels", "flag_A", "flag_B", "flag_F100",
-            "flag_R1", "flag_R5", "flag_b2", "flag_b3", "flag_b4", "exact_name", "exact_addr", "country", "src_s3",
+            "flag_R1", "flag_R5", "flag_RROM5", "flag_b2", "flag_b3", "flag_b4", "exact_name", "exact_addr", "country", "src_s3",
             "name_jacc", "name_cont", "addr_jacc", "digit_jacc", "num_match", "pin_match", "q_addr_missing",
             "t_addr_missing", "name_len_diff", "cands_s1", "fwd_ratio_best", "name_jacc_rank"]
 M_FEATS = PR_FEATS + ["prune_p", "prune_rank", "name_jw", "addr_jw", "name_cont_q", "name_cont_t", "name_len_ratio",
@@ -559,7 +559,7 @@ def main():
     for name_, bit in (("flag_A", A), ("flag_B", B), ("flag_F100", F100), ("flag_F200", F200), ("flag_R1", R1),
                        ("flag_R5", R5), ("flag_RROM5", RROM5), ("flag_b2", B2C), ("flag_b3", B3C), ("flag_b4", B4C)):
         P[name_] = ((ub & bit) > 0).astype(np.int8)
-    P["num_channels"] = P[["flag_A", "flag_B", "flag_F200", "flag_R5", "flag_b2", "flag_b3", "flag_b4"]].sum(axis=1).astype(np.int8)
+    P["num_channels"] = P[["flag_A", "flag_B", "flag_F200", "flag_R5", "flag_RROM5", "flag_b2", "flag_b3", "flag_b4"]].sum(axis=1).astype(np.int8)
     P["fwd_tfidf"], P["fwd_rank"], P["rev_tfidf"], P["rev_rank"] = ufs, ufr.astype(np.int32), urs, urr.astype(np.int16)
     del upk, ub, ufr, urr, ufs, urs
     gc.collect()
@@ -586,7 +586,7 @@ def main():
             N = pd.DataFrame({"q": nq_, "code": nw.code.values.astype(np.int64)})
             N["label"] = np.isin(lk[~hit], truth_keys)
             N["g"] = grp_q[nq_]; N["fold"] = fold_q[nq_]; N["is_s2"] = (N.code.values & 3) == 2
-            for c_ in ("flag_A", "flag_B", "flag_F100", "flag_F200", "flag_R1", "flag_R5", "flag_b2", "flag_b3", "flag_b4", "num_channels"):
+            for c_ in ("flag_A", "flag_B", "flag_F100", "flag_F200", "flag_R1", "flag_R5", "flag_RROM5", "flag_b2", "flag_b3", "flag_b4", "num_channels"):
                 N[c_] = np.int8(0)
             N["fwd_tfidf"], N["fwd_rank"], N["rev_tfidf"], N["rev_rank"] = np.float32(0), np.int32(9999), np.float32(0), np.int16(99)
             for c_ in P.columns:
