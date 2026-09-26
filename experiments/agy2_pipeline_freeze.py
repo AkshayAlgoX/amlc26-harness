@@ -1,3 +1,4 @@
+from experiments.agy2_x2_features import R_FEATURES
 """Freeze the ONE H4 / production configuration: B2 features + expected-F0.5 decision (run before any H4 scoring).
 
 Writes experiments/configs/h4_frozen.json (the canonical path; agy2_pipeline.py reads nothing else outside tests).
