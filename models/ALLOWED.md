@@ -6,6 +6,7 @@ fills the row, and flips the status. Candidates below are pre-filled but UNVERIF
 
 | HF id | params | revision (pinned) | licence (from model card) | status | checked by | use |
 |---|---|---|---|---|---|---|
+| BAAI/bge-reranker-v2-m3 | ~0.56B / 567.7M | `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e` | Apache-2.0 | OK | Captain | cross-encoder reranking |
 | Qwen/Qwen3-VL-8B-Instruct | 8.77B (8,767,123,696) | `0c351dd01ed87e9c1b53cbc748cba10e6187ff3b` | Apache-2.0 (verify) | TODO | | VLM: extraction / VQA / LoRA fine-tune |
 | Qwen/Qwen3.5-2B | ~2B | `15852e8c16360a2fea060d615a32b45270f8a8fc` | Apache-2.0 (verify) | TODO | | fast VLM baseline |
 | PaddlePaddle/PaddleOCR-VL | ~0.9B | `7fa00a8c55b735ba51ba49a9058f3f9c57a99a11` | verify | TODO | | OCR |
