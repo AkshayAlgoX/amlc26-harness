@@ -246,13 +246,7 @@
       "name_jw_gap_s1",
       "addr_jw_gap_s1",
       "name_jw_rank_s1",
-      "n_strong_name_s1",
-      "t_name_kind",
-      "fx_name_char3",
-      "fx_name_jw",
-      "fx_name_tokjacc",
-      "fx_name_skeljacc",
-      "fx_name_skelcov"
+      "n_strong_name_s1"
     ],
     "exp9_results_sha256": "0093025bf8b68a12fc290b87d497915b9be415db6d4cab5405a39571fcd9e7c4",
     "exp9_h1_oof_macro_f05": 0.9394136402248061,
