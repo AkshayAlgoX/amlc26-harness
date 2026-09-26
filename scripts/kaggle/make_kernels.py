@@ -75,7 +75,7 @@ def main():
     (stage / "BUNDLE_COMMIT").write_text(commit + "\n")
     (out / "bundle_stage" / "dataset-metadata.json").write_text(json.dumps(
         {"title": a.bundle_slug.split("/")[1], "id": a.bundle_slug, "licenses": [{"name": "other"}]}))
-    cfg_sha = hashlib.sha256((stage / "experiments/configs/h4_x2_frozen.json").read_bytes()).hexdigest()
+    cfg_sha = hashlib.sha256((stage / "experiments/configs/h4_frozen.json").read_bytes()).hexdigest()
     plan = json.loads((stage / "experiments/configs/test_shards.json").read_text())
     base = {"bundle_commit": commit, "config_sha256": cfg_sha}
     ids = {"h4": kernel(out, "h4", "amlc26-x2-h4", {**base, "kind": "h4"}, a.bundle_slug, [])}

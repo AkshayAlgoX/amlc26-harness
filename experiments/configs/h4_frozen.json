@@ -1,7 +1,7 @@
 {
   "experiment": "agy2-er-010-pipeline-h4",
   "code_sha256": {
-    "experiments/agy2_pipeline.py": "e552bbd5c423933cd17a634e2a6c8d5a53a9f7b447f8428de730ad1c7af76f85",
+    "experiments/agy2_pipeline.py": "ee69bfd61b3fd62d427bdd9725d06135737d667e48fc8e04d61253f5e96f519e",
     "experiments/agy2_pipeline_merge.py": "b00a31a7b1e42eef190030aa952b4f3eb5adb181f289fdd6c9f21f9576bfb2df",
     "experiments/agy2_exp4_fresh_holdout_validation.py": "3fbc1acdfcad796e07177322944b014dd9acce7a84f79175ad731b482b97bf3c",
     "experiments/agy2_exp5_corrected_holdout.py": "7099f61462beca23359a39be49d7bb53a1d0b8b95a5efa042d894a50a7bef9bf",
@@ -12,7 +12,9 @@
     "src/er/__init__.py": "39de377a4125c80a0fa4cc624d1a5b3f660edc02329d3420464d86e9fbbdc2b9",
     "src/er/loader.py": "b990be064386cd581659bb919e505ec375db20de77531192f7f88628d4fa9634",
     "src/er/ids.py": "48356a1b7ae0d7575c1f49e527294f44c96860ad315bb93a7c93917944141280",
-    "src/er/validator.py": "a6fe55df18dc8afe2d66ac851707f07353bcc91975c2a9ef282a365e8ac59c48"
+    "src/er/validator.py": "a6fe55df18dc8afe2d66ac851707f07353bcc91975c2a9ef282a365e8ac59c48",
+    "experiments/agy2_x2_features.py": "e890f9c2475ce237b499c05bc1be17f7d9b5e078ee4dd8417f0c02cac96d663f",
+    "experiments/agy2_pipeline_freeze.py": "f04fef5b56309c1097f33508aa731cda3da42ed1c3138eabec59155c249165f6"
   },
   "seed": 42,
   "groups": {
@@ -170,7 +172,15 @@
       "name_jw_gap_s1",
       "addr_jw_gap_s1",
       "name_jw_rank_s1",
-      "n_strong_name_s1"
+      "n_strong_name_s1",
+      "t_name_kind",
+      "fx_name_char3",
+      "fx_name_jw",
+      "fx_name_tokjacc",
+      "fx_name_skeljacc",
+      "fx_name_skelcov",
+      "d_name_cov",
+      "d_name_jac"
     ],
     "learning_rate": 0.08,
     "num_leaves": 63,
@@ -180,7 +190,14 @@
     "lambda_l2": 1.0,
     "max_bin": 127,
     "max_rounds": 1000,
-    "early_stopping": 50
+    "early_stopping": 50,
+    "best_iters": [
+      986,
+      985,
+      844,
+      893,
+      995
+    ]
   },
   "calibration": "none (set rules on raw cross-fitted scores)",
   "set_rules": {

@@ -43,7 +43,8 @@ def build_h4(root: Path, files: dict, cand: str, exp9: dict, exp9_sha: str, stat
                  "prior_list_files": {k: files[k] for k in ("H0", "H1", "H2", "H3")}}
     cfg.pop("h3", None); cfg.pop("h2_salt", None)
     cfg["stats_exclude"] = list(stats_exclude)
-    cfg["matcher"]["features"] = list(M_FEATS) + extra
+    from experiments.agy2_x2_features import R_FEATURES
+    cfg["matcher"]["features"] = list(M_FEATS) + extra + R_FEATURES
     cfg["matcher"]["max_rounds"] = 1000 if cand != "B0" else 600
     cfg["candidate"] = {"name": cand, "extra_features": extra, "exp9_results_sha256": exp9_sha,
                         "exp9_h1_oof_macro_f05": ev["macro_f05"], "exp9_rule": ev["rule"], "exp9_params": ev["params"],

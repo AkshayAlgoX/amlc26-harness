@@ -24,7 +24,7 @@ def _bundle(d: Path, commit=COMMIT):
 
 
 def _stub(tmp: Path) -> Path:
-    MK.kernel(tmp, "k", "amlc26-p-h4", {"bundle_commit": COMMIT, "config_sha256": "x", "kind": "h4"}, "o/s", [])
+    MK.kernel(tmp, "k", "amlc26-x2-h4", {"bundle_commit": COMMIT, "config_sha256": "x", "kind": "h4"}, "o/s", [])
     return tmp / "k" / "run.py"
 
 
@@ -40,7 +40,7 @@ def test_stub_finds_bundle_by_content(tmp_path, layout):
     ds = inp / ("amlc26-agy2-px" if layout != "nested" else "datasets/akshayalgox/amlc26-agy2-px")
     _bundle(ds)
     if layout == "with_kernel_output_copy":
-        _bundle(inp / "amlc26-p-h4" / "amlc26-agy2")          # repo copy inside a kernel output: not preferred
+        _bundle(inp / "amlc26-x2-h4" / "amlc26-agy2")          # repo copy inside a kernel output: not preferred
     (inp / "other").mkdir(parents=True)
     _bundle(inp / "other" / "stale", commit="b" * 40)        # different commit: never selected
     r = _run(_stub(tmp_path), inp, work)

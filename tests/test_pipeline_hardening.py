@@ -240,9 +240,9 @@ def test_make_kernels_builds_fail_closed_chain(tmp_path):
         assert all(sha256_file(ROOT / m) == h for m, h in cfg["code_sha256"].items()), "pinned module mismatch in bundle"
         job = {"bundle_commit": commit, "config_sha256": sha256_file(ROOT / "experiments/configs/h4_frozen.json"),
                "kind": "test_shards", "shards": {"country": "India", "count": plan["shards"]["India"], "indices": [0]}}
-        kid = MK.kernel(tmp_path, "test_India_0", "amlc26-p-test-india-0", job, "akshayalgox/amlc26-agy2-test", ["amlc26-p-h4"])
+        kid = MK.kernel(tmp_path, "test_India_0", "amlc26-x2-test-india-0", job, "akshayalgox/amlc26-agy2-test", ["amlc26-x2-h4"])
         meta = json.loads((tmp_path / "test_India_0" / "kernel-metadata.json").read_text())
-        assert kid.endswith("amlc26-p-test-india-0") and not meta["enable_internet"] and not meta["enable_gpu"]
+        assert kid.endswith("amlc26-x2-test-india-0") and not meta["enable_internet"] and not meta["enable_gpu"]
         stub = (tmp_path / "test_India_0" / "run.py").read_text()
         assert '"kind": "test_shards"' in stub and f'"count": {plan["shards"]["India"]}' in stub and commit in stub
         return
@@ -267,7 +267,7 @@ def test_make_kernels_builds_fail_closed_chain(tmp_path):
     assert set(metas) == expected_dirs, f"expected {sorted(expected_dirs)}, got {sorted(metas)}"
     assert all(not m["enable_internet"] and not m["enable_gpu"] for m in metas.values())
     # merge sources: h4 + all test kernels
-    assert metas["merge"]["kernel_sources"][0].endswith("amlc26-p-h4")
+    assert metas["merge"]["kernel_sources"][0].endswith("amlc26-x2-h4")
     assert len(metas["merge"]["kernel_sources"]) == 1 + total_shards
     # Kaggle hard limit: merge has 2 dataset_sources + (1 + total_shards) kernel_sources <= 20
     assert 2 + 1 + total_shards <= 20, f"merge would need {2 + 1 + total_shards} sources (max 20)"
