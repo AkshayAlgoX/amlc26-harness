@@ -1,4 +1,3 @@
-from experiments.agy2_x2_features import R_FEATURES
 """Freeze the ONE H4 / production configuration: B2 features + expected-F0.5 decision (run before any H4 scoring).
 
 Writes experiments/configs/h4_frozen.json (the canonical path; agy2_pipeline.py reads nothing else outside tests).
@@ -82,8 +81,7 @@ def build_pipeline_config(root: Path, files: dict, exp9: dict, exp9_sha: str, va
     drop = ["country"] if variant == "B2nc" else []
     cfg["drop_features"] = drop
     cfg["pruner"]["features"] = [f for f in PR_FEATS if f not in drop]
-    from experiments.agy2_x2_features import R_FEATURES
-    cfg["matcher"]["features"] = [f for f in list(M_FEATS) + list(NEW_FEATURES) + R_FEATURES if f not in drop]
+        cfg["matcher"]["features"] = [f for f in list(M_FEATS) + list(NEW_FEATURES) + R_FEATURES if f not in drop]
     if not smoke:
         cfg["budget"]["top_n"] = top_n
     cfg["candidate"]["name"] = variant
