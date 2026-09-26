@@ -119,7 +119,8 @@ def main():
     R, PRN, MAT, RUL = cfg["retrieval"], cfg["pruner"], cfg["matcher"], cfg["set_rules"]
     EXTRA = cfg["candidate"]["extra_features"]
     assert set(EXTRA) <= set(F9.NEW_FEATURES)
-    M_RUN = M_FEATS + EXTRA
+    from experiments.agy2_x2_features import R_FEATURES
+    M_RUN = M_FEATS + EXTRA + R_FEATURES
     assert PRN["features"] == PR_FEATS and MAT["features"] == M_RUN, "feature lists differ from frozen config"
     NFOLD, FOLD_SALT = cfg["folds"]["nfold"], cfg["folds"]["salt"]
     TOPN, FLOOR = cfg["budget"]["top_n"], cfg["budget"]["floor"]
