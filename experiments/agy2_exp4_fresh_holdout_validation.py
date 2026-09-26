@@ -66,6 +66,7 @@ def clean_text(text: object) -> str:
     if text is None or pd.isna(text):
         return ""
     s = unicodedata.normalize("NFKD", str(text))
+    s = "".join([c for c in s if not unicodedata.combining(c)])
     s = s.replace("&", " and ")
     s = RE_NON_ALPHANUM.sub(" ", s).lower().strip()
     return " ".join(s.split())

@@ -3,7 +3,7 @@
   "code_sha256": {
     "experiments/agy2_pipeline.py": "1fd8a9dce4528b3233bfd2fe0037e2f2a22801701332489085d651b3e82e6f2d",
     "experiments/agy2_pipeline_merge.py": "b00a31a7b1e42eef190030aa952b4f3eb5adb181f289fdd6c9f21f9576bfb2df",
-    "experiments/agy2_exp4_fresh_holdout_validation.py": "3fbc1acdfcad796e07177322944b014dd9acce7a84f79175ad731b482b97bf3c",
+    "experiments/agy2_exp4_fresh_holdout_validation.py": "d7b832de1bb0bf4307a8afd5eb669b502213da3f6f0f5dbda261c2e012adff63",
     "experiments/agy2_exp5_corrected_holdout.py": "7099f61462beca23359a39be49d7bb53a1d0b8b95a5efa042d894a50a7bef9bf",
     "experiments/agy2_exp6_integrated.py": "6a879c98465d6d8f2dd99cb0af67af368de8ed9132f542fb5a1a6a18770c7d98",
     "experiments/agy2_exp7_prep_h3.py": "fe9ae0740a941662414916c986efb0c13a011973a0179f29ad3c4f78a1cde86f",
@@ -13,7 +13,7 @@
     "src/er/loader.py": "b990be064386cd581659bb919e505ec375db20de77531192f7f88628d4fa9634",
     "src/er/ids.py": "48356a1b7ae0d7575c1f49e527294f44c96860ad315bb93a7c93917944141280",
     "src/er/validator.py": "a6fe55df18dc8afe2d66ac851707f07353bcc91975c2a9ef282a365e8ac59c48",
-    "experiments/agy2_x2_features.py": "e890f9c2475ce237b499c05bc1be17f7d9b5e078ee4dd8417f0c02cac96d663f",
+    "experiments/agy2_x2_features.py": "f3a11bb26a6492dfc5b7b439e1d514116c54122599dea434daf167b0b7c42cfb",
     "experiments/agy2_pipeline_freeze.py": "39a4b8d758a6741f7531f1f80aac47b8d0d9cd9ff065a28058c249fea9d28e58"
   },
   "seed": 42,

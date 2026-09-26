@@ -313,3 +313,20 @@ def test_extra_train_gate_and_disjoint_draw(tmp_path):
     mf = rd(tmp_path / "h4" / "artifacts" / "c4c5_matcher_rows.parquet")
     assert set(mf[mf.g == 1].s1_id) <= set(Path(syn["files"]["H4"]).read_text().split())   # extra never in H4 group
     assert set(extra) & set(mf[mf.g == 0].s1_id)                                         # extra used for training
+
+def test_accent_safe_normalization():
+    from experiments.agy2_exp4_fresh_holdout_validation import clean_text
+    
+    # Test that combining marks are stripped without inserting spaces
+    # é = e + \u0301 (combining acute)
+    test_str = "café"
+    # Even if café is precomposed, NFKD splits it to c a f e \u0301.
+    # We want it to become "cafe", not "cafe " or "caf e ".
+    assert clean_text(test_str) == "cafe"
+    
+    test_str_2 = "a\u0301b" # a + combining acute + b
+    assert clean_text(test_str_2) == "ab"
+    
+    # Test basic cleanup
+    assert clean_text("A & B Co.") == "a and b co"
+
