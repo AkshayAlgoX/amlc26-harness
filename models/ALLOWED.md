@@ -13,6 +13,7 @@ fills the row, and flips the status. Candidates below are pre-filled but UNVERIF
 | openai/clip-vit-large-patch14 | ~0.4B | `32bd64288804d66eefd0ccbe215aa642df71cc41` | verify | TODO | | image-text encoder |
 | microsoft/deberta-v3-base | ~0.2B | `8ccc9b6f36199bec6961081d44eb72fb3f7353f3` | verify | TODO | | text encoder |
 | answerdotai/ModernBERT-base | ~0.15B | `8949b909ec900327062f0ebf497f51aef5e6f0c8` | verify | TODO | | text encoder (long context) |
+| minishlab/potion-multilingual-128M | 0.13B (≈128M) | `73908c3438cf03b6a01bcb9611d62b23d0726f08` | MIT | OK | ein | embedding |
 | Qwen/Qwen3-Embedding-0.6B | 0.6B | `97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3` | verify | TODO | | text embeddings |
 
 Not allowed unless the 2026 rules change: anything under custom licences (e.g. Gemma terms, which covers
