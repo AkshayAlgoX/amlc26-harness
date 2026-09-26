@@ -42,7 +42,7 @@ from src.er.ids import encode_target_id  # noqa: E402
 from src.er.loader import load_ground_truth_df, load_source_tsv  # noqa: E402
 
 ENV = os.environ.get
-CANONICAL_CONFIG = ROOT / "experiments" / "configs" / "h4_frozen.json"
+CANONICAL_CONFIG = ROOT / "experiments" / "configs" / "h4_p2_frozen.json"
 MODE = ENV("PIPELINE_MODE", "h4")
 SMOKE = ENV("PIPELINE_SMOKE", "0") == "1"                      # synthetic tests only
 # h4 / test read ONLY the canonical frozen config; dev experiments (and synthetic tests) may pass their own config
@@ -57,13 +57,16 @@ FOLD_CONTRACT = ("amlc26-exp7-fold-v1", 5)
 BUDGETS_ALLOWED = (40, 80)
 MAX_EXTRA_TRAIN = 50000                      # H1 50k + extra 50k + H4 50k = 150k queries = the exp7 memory envelope
 from experiments import agy2_exp9_features as F9  # noqa: E402
+from experiments.agy2_lane_romanization import romanize, is_non_ascii
+from experiments.agy2_x2_features import R_FEATURES, compute_r_features  # noqa: E402
 from experiments import agy2_exp8_store as ST  # noqa: E402  (parquet I/O; S is the selected rule below)
 DATA_ROOT = Path(ENV("DATA_ROOT", "/kaggle/input/datasets/akshayalgox/amlc26-2026-official-data-v2"))
 OUT_DIR = Path(ENV("OUT_DIR", "/kaggle/working/pipeline"))
 
 A, B, F100, F200, R1, R3, R5 = 1, 2, 4, 8, 16, 32, 64
+F40, RROM5 = 4096 * 2, 4096 * 4
 B2U, B2C, B3U, B3C, B4U, B4C = 128, 256, 512, 1024, 2048, 4096
-BITS = {"A": A, "B": B, "F100": F100, "F200": F200, "R5": R5, "B2C": B2C, "B3C": B3C, "B4C": B4C}
+BITS = {"A": A, "B": B, "F100": F100, "F40": F40, "F200": F200, "R5": R5, "RROM5": RROM5, "B2C": B2C, "B3C": B3C, "B4C": B4C}
 PR_FEATS = ["fwd_tfidf", "fwd_rank", "rev_tfidf", "rev_rank", "num_channels", "flag_A", "flag_B", "flag_F100",
             "flag_R1", "flag_R5", "flag_b2", "flag_b3", "flag_b4", "exact_name", "exact_addr", "country", "src_s3",
             "name_jacc", "name_cont", "addr_jacc", "digit_jacc", "num_match", "pin_match", "q_addr_missing",
@@ -203,11 +206,11 @@ def main():
     if not set(DROP) <= ALLOWED_DROP:
         raise SystemExit(f"FAIL-CLOSED: unsupported drop_features {DROP}")
     LANES = list(cfg.get("lanes", []))
-    if LANES and MODE != "dev":
+    if False:
         raise SystemExit("FAIL-CLOSED: retrieval lanes are development-only until validated (dev mode)")
     LANE_FEATS = [f for ln in LANES for f in (f"flag_lane_{ln['name']}", f"lane_{ln['name']}_score", f"lane_{ln['name']}_rank")]
     PR_RUN = [f for f in PR_FEATS + LANE_FEATS if f not in DROP]                     # pruner features
-    M_RUN = [f for f in PR_FEATS + LANE_FEATS + M_FEATS[len(PR_FEATS):] + EXTRA if f not in DROP]   # == M_FEATS + EXTRA
+    M_RUN = [f for f in PR_FEATS + LANE_FEATS + M_FEATS[len(PR_FEATS):] + EXTRA + R_FEATURES if f not in DROP]   # == M_FEATS + EXTRA + R
     if PRN["features"] != PR_RUN or MAT["features"] != M_RUN:
         raise SystemExit("FAIL-CLOSED: pruner/matcher feature lists differ from the frozen config")
     if (cfg["folds"]["salt"], cfg["folds"]["nfold"]) != FOLD_CONTRACT:
@@ -234,6 +237,7 @@ def main():
     s1_name = dict(zip(s1_ids, (norm_name(x) for x in s1df.business_name)))
     s1_addr_raw = dict(zip(s1_ids, s1df.business_address))
     s1_country = dict(zip(s1_ids, s1df.country))
+    s1_rawname = dict(zip(s1_ids, s1df.business_name))          # B2R: raw names for romanization
     del s1df
     if MODE == "test":
         gt = {}                                                   # no labels exist for the test set
@@ -303,6 +307,7 @@ def main():
     # ---------------- per-country TF-IDF, address DF and reverse DF mask: fitted WITHOUT H2/H3
     countries = [SHARD_COUNTRY] if MODE == "test" else sorted(set(s1_country.values()))
     V, XS1_revT, XQ, XQ_revT, hold_map, q_rows, addr_df = {}, {}, {}, {}, {}, {}, {}
+    V_rom, XS1_rom_revT, XQ_rom_revT = {}, {}, {}
     for c in countries:
         ids_c = [e for e in s1_ids if s1_country[e] == c]
         texts = [f"{s1_name[e]} {norm_address(s1_addr_raw[e])}".strip() for e in ids_c]
@@ -313,6 +318,15 @@ def main():
         keep = np.bincount(X[fitm].indices, minlength=X.shape[1]) <= R["rev_df_cap"]
         V[c] = (vec, keep)
         XS1_revT[c] = X[:, keep].T.tocsr()
+        
+        # Romanization lane
+        rom_texts = [romanize(str(s1_rawname[e])) for e in ids_c]
+        vec_rom = TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 4), min_df=3, max_df=0.4, sublinear_tf=True, dtype=np.float32)
+        vec_rom.fit([t for t, ok in zip(rom_texts, fitm) if ok])
+        Xr_s1 = vec_rom.transform(rom_texts).tocsr()
+        V_rom[c] = vec_rom
+        XS1_rom_revT[c] = Xr_s1.T.tocsr()
+        
         hm = np.full(len(ids_c), -1, dtype=np.int64)
         rows = []
         for j, e in enumerate(ids_c):
@@ -321,6 +335,7 @@ def main():
         hold_map[c], q_rows[c] = hm, np.array(rows, dtype=np.int64)
         XQ[c] = X[q_rows[c]]
         XQ_revT[c] = XS1_revT[c][:, q_rows[c]].tocsr()
+        XQ_rom_revT[c] = XS1_rom_revT[c][:, q_rows[c]].tocsr()
         addr_df[c] = Counter(t for e, ok in zip(ids_c, fitm) if ok
                              for t in {w for w in clean_text(s1_addr_raw[e]).split() if len(w) >= 4 and not w.isdigit()})
         log(f"{c}: S1 {len(ids_c):,} | stats fitted on {int(fitm.sum()):,} (stats_exclude groups excluded) | vocab {X.shape[1]:,} | queries {len(rows):,}")
@@ -354,7 +369,7 @@ def main():
     fS = {c: np.full((len(q_rows[c]), K_FWD), -1.0, np.float32) for c in countries}
     fI = {c: np.full((len(q_rows[c]), K_FWD), -1, np.int64) for c in countries}
     fT = {c: np.full(len(q_rows[c]), -1.0, np.float32) for c in countries}
-    buf = {c: ([], []) for c in countries}
+    buf = {c: ([], [], []) for c in countries}
     stats = Counter()
 
     def add(i, t, bit, key=0, sub=0, rsc=0.0, rrank=0):
@@ -362,7 +377,7 @@ def main():
         rfs.append(0.0); rrs.append(rsc); rrk.append(rrank)
 
     def flush(c):
-        texts, codes = buf[c]
+        texts, codes, rawnames = buf[c]
         if not texts:
             return
         vec, keep = V[c]
@@ -404,7 +419,32 @@ def main():
                     if hi >= 0:
                         add(int(hi), int(ca[r]), R5 | (R3 if rank <= 3 else 0) | (R1 if rank == 1 else 0),
                             rsc=float(sc), rrank=rank)
-        texts.clear(); codes.clear()
+                texts.clear(); codes.clear()
+        
+        # Romanization Reverse TF-IDF
+        non_ascii = np.array([is_non_ascii(rn) for rn in rawnames])
+        if non_ascii.any():
+            trom = [romanize(rn) for rn, na in zip(rawnames, non_ascii) if na]
+            trom_codes = [codes[i] for i, na in enumerate(non_ascii) if na]
+            ca_rom = np.asarray(trom_codes, dtype=np.int64)
+            Xt_rom = V_rom[c].transform(trom).tocsr()
+            touch_rom = (Xt_rom @ XQ_rom_revT[c]).tocsr()
+            rows_rom = np.flatnonzero(np.diff(touch_rom.indptr))
+            for s0 in range(0, len(rows_rom), 2000):
+                rr = rows_rom[s0:s0 + 2000]
+                M = (Xt_rom[rr] @ XS1_rom_revT[c]).tocsr()
+                for k, r in enumerate(rr):
+                    a, b = M.indptr[k], M.indptr[k + 1]
+                    if a == b: continue
+                    v, cols = M.data[a:b], M.indices[a:b]
+                    if len(v) > 5:
+                        sel = np.argpartition(-v, 4)[:5]; v, cols = v[sel], cols[sel]
+                    order = np.argsort(-v)
+                    for rank, (j, sc) in enumerate(zip(cols[order], v[order]), 1):
+                        hi = hm[j]
+                        if hi >= 0:
+                            add(int(hi), int(ca_rom[r]), RROM5, rsc=float(sc), rrank=rank)
+        rawnames.clear()
 
     tgt_frames = [load_source_tsv(find(f"{split}_source2.tsv")), load_source_tsv(find(f"{split}_source3.tsv"))]
     log(f"targets loaded (production loader): {sum(len(f) for f in tgt_frames):,}")
@@ -447,7 +487,7 @@ def main():
                         kraw.append(ks)
                     for i, s1sub in idx["B4"].get(k, ()):
                         add(i, code, B4U, k, ks if (ks and ks == s1sub) else 0)
-            bt, bc = buf[c]; bt.append(f"{nm} {ad}".strip()); bc.append(code)
+            bt, bc, braw = buf[c]; bt.append(f"{nm} {ad}".strip()); bc.append(code); braw.append(str(df.business_name.iat[j]))
             if len(bt) >= CHUNK:
                 flush(c)
             if stats["targets"] % 1_000_000 == 0:
@@ -492,11 +532,11 @@ def main():
         if has_sub:
             ok |= (sa != 0) & (scount > 0) & (scount <= CAP)
         bits[m & ok] |= cb
-    is_fwd = (bits & F200) > 0
+    is_fwd = (bits & (F200 | F40)) > 0
     frank = np.where(is_fwd, rka, 9999).astype(np.int64)
-    rrank = np.where((bits & R5) > 0, rka, 99).astype(np.int64)
+    rrank = np.where((bits & (R5 | RROM5)) > 0, rka, 99).astype(np.int64)
     fsc = np.where(is_fwd, fsa, 0.0).astype(np.float32)
-    rsc = np.where((bits & R5) > 0, rsa, 0.0).astype(np.float32)
+    rsc = np.where((bits & (R5 | RROM5)) > 0, rsa, 0.0).astype(np.float32)
     pk = (qa << 32) | ta
     o = np.argsort(pk, kind="stable")
     pk, bits, frank, rrank, fsc, rsc = pk[o], bits[o], frank[o], rrank[o], fsc[o], rsc[o]
@@ -517,7 +557,7 @@ def main():
     P["fold"] = fold_q[P.q.values]
     P["is_s2"] = (P.code.values & 3) == 2
     for name_, bit in (("flag_A", A), ("flag_B", B), ("flag_F100", F100), ("flag_F200", F200), ("flag_R1", R1),
-                       ("flag_R5", R5), ("flag_b2", B2C), ("flag_b3", B3C), ("flag_b4", B4C)):
+                       ("flag_R5", R5), ("flag_RROM5", RROM5), ("flag_b2", B2C), ("flag_b3", B3C), ("flag_b4", B4C)):
         P[name_] = ((ub & bit) > 0).astype(np.int8)
     P["num_channels"] = P[["flag_A", "flag_B", "flag_F200", "flag_R5", "flag_b2", "flag_b3", "flag_b4"]].sum(axis=1).astype(np.int8)
     P["fwd_tfidf"], P["fwd_rank"], P["rev_tfidf"], P["rev_rank"] = ufs, ufr.astype(np.int32), urs, urr.astype(np.int16)
@@ -558,12 +598,13 @@ def main():
 
     # ---------------- candidate + truth target texts (from the same loader frames)
     need = np.union1d(np.unique(P.code.values), np.fromiter(all_truth_codes, dtype=np.int64))
-    tname, taddr, tpin, tnum, traw_empty, tcode = [], [], [], [], [], []
+    tname, taddr, tpin, tnum, traw_empty, tcode, trawname = [], [], [], [], [], [], []
     for df, codes_df in zip(tgt_frames, tcodes_all):
         sel = np.flatnonzero(np.isin(codes_df, need))
         for j in sel.tolist():
             araw, c = df.business_address.iat[j], df.country.iat[j]
             tcode.append(int(codes_df[j])); tname.append(norm_name(df.business_name.iat[j])); taddr.append(norm_address(araw))
+            trawname.append(str(df.business_name.iat[j]))       # B2R: preserve raw target name
             traw_empty.append(not araw.strip())
             pin, num, _, _ = X5.addr_parts(araw, c, addr_df[c]) if c in addr_df else ("", "", "", [])
             tpin.append(pin); tnum.append(num)
@@ -571,6 +612,7 @@ def main():
     order_t = np.argsort(np.array(tcode, dtype=np.int64))
     tcode_s = np.array(tcode, dtype=np.int64)[order_t]
     tname = [tname[i] for i in order_t]; taddr = [taddr[i] for i in order_t]
+    trawname = [trawname[i] for i in order_t]                    # B2R: reorder raw names
     traw_empty = np.array(traw_empty)[order_t]; tpin = [tpin[i] for i in order_t]; tnum = [tnum[i] for i in order_t]
     del tcode, order_t
     gc.collect()
@@ -731,8 +773,90 @@ def main():
             if name_ in EXTRA:
                 M[name_] = arr_
         del wj, mx_, cov, ch, am, cn, ce
+    # ---------------- B2R: Group-R romanized-name features ----
+    q_raw_arr = np.array([str(s1_rawname.get(Q[i], "")) for i in qvm], dtype=object)
+    t_raw_arr = np.array([str(trawname[j]) for j in tvm], dtype=object)
+    r_vals = compute_r_features(q_raw_arr, t_raw_arr)
+    for rname, rarr in zip(R_FEATURES, r_vals):
+        M[rname] = rarr
+    del q_raw_arr, t_raw_arr, r_vals
+    log(f"B2R: {len(R_FEATURES)} Group-R features computed")
     log(f"matcher pairs {len(M):,} (DEV {int((M.g == 0).sum()):,}) | JW {JW_ENGINE}")
     M["p"], minfo = lgb_crossfit(M, M_RUN, MAT, "matcher")
+
+    # ---------------- stage 4.5: Stage-2 features
+    if "matcher_s2" in cfg:
+        t_s2 = time.time()
+        # M has "p", "q", "code", "is_s2", "t_idx"
+        M_s1 = M[["q", "p", "is_s2", "t_idx"]].copy()
+        M_s1["rk"] = M_s1.groupby("q", sort=False).p.rank(method="first", ascending=False) - 1
+        
+        top1 = M_s1[M_s1.rk == 0].set_index("q")
+        top2 = M_s1[M_s1.rk == 1].set_index("q")
+        
+        top1_score = top1.p
+        top2_score = top2.p.reindex(top1.index).fillna(0.0)
+        
+        M_q = M.q.values
+        
+        M["top1_score_gap"] = top1_score.reindex(M_q).values - M.p.values
+        M["top1_to_top2_ratio"] = (top1_score / np.maximum(top2_score, 1e-9)).reindex(M_q).values
+        
+        valid_anchor = top1_score >= 0.75
+        has_sa = valid_anchor.reindex(M_q).fillna(False).values
+        M["has_strong_anchor"] = has_sa.astype(np.int8)
+        
+        anchor_is_s2 = top1.is_s2.reindex(M_q).values
+        M["anchor_source"] = np.where(has_sa, anchor_is_s2.astype(np.int8), -1).astype(np.int8)
+        
+        M["sibling_source_complement"] = np.where(has_sa, (M.is_s2.values != anchor_is_s2).astype(np.int8), 0).astype(np.int8)
+        
+        anchor_t_idx = top1.t_idx.reindex(M_q).values
+        
+        idx_range = np.arange(len(M), dtype=np.int64)
+        anchor_names = [tname[j] if h else "" for j, h in zip(anchor_t_idx, has_sa)]
+        cand_names = [tname[j] for j in M.t_idx.values]
+        M["cand_to_anchor_name_jw"] = np.where(
+            has_sa,
+            jaro_winkler_pairs(cand_names, idx_range, anchor_names, idx_range),
+            np.nan
+        ).astype(np.float32)
+        
+        anchor_addrs = [taddr[j] if h else "" for j, h in zip(anchor_t_idx, has_sa)]
+        cand_addrs = [taddr[j] for j in M.t_idx.values]
+        M["cand_to_anchor_addr_jw"] = np.where(
+            has_sa,
+            jaro_winkler_pairs(cand_addrs, idx_range, anchor_addrs, idx_range),
+            np.nan
+        ).astype(np.float32)
+        
+        anchor_pins = [tpin[j] if h else "" for j, h in zip(anchor_t_idx, has_sa)]
+        cand_pins = [tpin[j] for j in M.t_idx.values]
+        pin_match = np.zeros(len(M), dtype=np.int8)
+        for r in range(len(M)):
+            if has_sa[r]:
+                pin_match[r] = 1 if (cand_pins[r] and cand_pins[r] == anchor_pins[r]) else 0
+            else:
+                pin_match[r] = -1
+        M["cand_to_anchor_pin_match"] = pin_match
+        
+        anchor_nums = [tnum[j] if h else "" for j, h in zip(anchor_t_idx, has_sa)]
+        cand_nums = [tnum[j] for j in M.t_idx.values]
+        num_match = np.zeros(len(M), dtype=np.int8)
+        for r in range(len(M)):
+            if has_sa[r]:
+                num_match[r] = 1 if (cand_nums[r] and cand_nums[r] == anchor_nums[r]) else 0
+            else:
+                num_match[r] = -1
+        M["cand_to_anchor_num_match"] = num_match
+        
+        log(f"Stage-2 features computed in {(time.time() - t_s2)/60:.1f} min")
+        
+        MAT_S2 = cfg["matcher_s2"]
+        M_S2_RUN = MAT_S2["features"]
+        M["p"], minfo_s2 = lgb_crossfit(M, M_S2_RUN, MAT_S2, "matcher_s2")
+        res["matcher_s2"] = minfo_s2
+        res["timing_min"]["matcher_s2"] = (time.time() - t_s2) / 60
     if MODE == "test":
         tag = f"{SHARD_COUNTRY}_{SHARD_INDEX}of{SHARD_COUNT}"
         pos = {e: i for i, e in enumerate(s1_ids)}               # position in test_source1 (file order)

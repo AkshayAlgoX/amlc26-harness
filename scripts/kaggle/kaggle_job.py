@@ -2,7 +2,7 @@
 
 usage (from the kernel stub): python scripts/kaggle/kaggle_job.py '<JOB JSON>'
 JOB = {"kind": "h4" | "dev" | "test_shards" | "merge",
-       "bundle_commit": "<40-hex>", "config_sha256": "<sha of experiments/configs/h4_frozen.json>",
+       "bundle_commit": "<40-hex>", "config_sha256": "<sha of experiments/configs/h4_x2_frozen.json>",
        "shards": {"country": "India", "count": 6, "indices": [0, 1, 2, 3, 4, 5]}}      # test_shards only
 Checks before any work: BUNDLE_COMMIT == job commit; canonical config sha == job sha; repository tests pass.
 h4 / dev    : agy2_pipeline.py (mode) -> /kaggle/working/<kind>/{export,artifacts,pipeline_<kind>_results.json}
@@ -68,7 +68,7 @@ def main(job: dict) -> int:
     commit = (REPO / "BUNDLE_COMMIT").read_text().strip() if (REPO / "BUNDLE_COMMIT").is_file() else ""
     if commit != job["bundle_commit"]:
         return fail(f"bundle commit {commit[:12]} != job {job['bundle_commit'][:12]}")
-    if sha(REPO / "experiments/configs/h4_frozen.json") != job["config_sha256"]:
+    if sha(REPO / "experiments/configs/h4_x2_frozen.json") != job["config_sha256"]:
         return fail("canonical config sha differs from the job")
     try:
         data = str(find_data_root())
