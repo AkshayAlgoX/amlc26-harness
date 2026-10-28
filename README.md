@@ -41,43 +41,59 @@ To ensure clear engineering boundaries, the code and infrastructure supporting t
 
 | Tier | Component | Location | Implementation & Reproducibility Status |
 | :--- | :--- | :--- | :--- |
-| **Tier 1** | **Core Harness & Contract Engine** | `src/`, `tests/`, `config.yaml`, `Makefile` | **Public & Fully Reproducible:** Contains fold assigners, family key heuristics, metric library, experiment registry, and 18 unit tests. Runs locally via Python 3.12 (`PY=python3 make test`). |
+| **Tier 1** | **Core Harness & Contract Engine** | `src/`, `tests/`, `config.yaml`, `Makefile` | **Public & Fully Reproducible:** Contains fold assigners, family key heuristics, general-purpose metric library (sMAPE, MAPE, F1-extraction), experiment registry, and 18 unit tests. Runs locally via Python 3.12 (`PY=python3 make test`). |
 | **Tier 2** | **Synthetic End-to-End Pipeline** | `scripts/smoke_test.sh`, `scripts/make_synthetic.py`, `experiments/` | **Public & Fully Reproducible:** Generates 4,000 synthetic catalog entities and runs the full pipeline from stratification through TF-IDF/GBDT modeling to hill-climb blending and submission validation (`PY=python3 make smoke`). |
-| **Tier 3** | **Specialized Multi-Lane ER Pipeline** | Dedicated competition branches (`ein/agy2-competition`, `ein/x2-freeze`) | **Specialized Worktree:** Contains multi-lane blocking (`agy2_pipeline.py`), 61-feature extraction (`agy2_x2_features.py`), early LightGBM pruning, and bipartite conflict merging (`agy2_pipeline_merge.py`). |
+| **Tier 3** | **Specialized Multi-Lane ER Pipeline** | Dedicated competition branches (`ein/agy2-competition`, commit `91f8d30`, `ein/x2-freeze`) | **Specialized Worktree:** Contains the 2026 entity-resolution module (`src/er/metric.py`, `tests/test_er.py`), multi-lane blocking (`agy2_pipeline.py`), 61-feature extraction (`agy2_x2_features.py`), early LightGBM pruning, and bipartite conflict merging (`agy2_pipeline_merge.py`). |
 | **Tier 4** | **Distributed Cloud Inference** | Kaggle CPU/GPU kernels (`akshayalgox/amlc26-*`) | **Cloud Execution Environment:** 17 country-partitioned shards executed within Kaggle's 12-hour session limits and 18 GB RAM ceilings, integrating `BAAI/bge-reranker-v2-m3` neural reranking. |
 | **Tier 5** | **Competition Submissions & Raw Data** | `output/` (hardlinked), `data/raw/` | **Proprietary & Non-Redistributable:** Raw competition data is protected under organizer non-disclosure terms; final submission TSVs (`matching_results.tsv`, 787 MB) exceed public git storage limits. |
 
 > [!IMPORTANT]
-> A clean clone of this public repository reproduces the core harness contracts, metric mathematics, and synthetic pipeline verification. It **does not** reproduce the full-scale competition entity-resolution inference or private leaderboard score, which depended on non-redistributable tournament datasets and cloud infrastructure.
+> A clean clone of this public repository reproduces the core harness contracts, general-purpose metric library, and synthetic pipeline verification. It **does not** reproduce the full-scale competition entity-resolution inference or private leaderboard score, which depended on non-redistributable tournament datasets and cloud infrastructure.
+>
+> Similarly, the 18 passing unit tests in `tests/` validate the core harness contracts and general-purpose metrics (`src/metric.py`). The 2026 Macro $F_{0.5}$ metric and ER pipeline logic were validated in a dedicated 11-test suite (`tests/test_er.py`) on competition branch `ein/agy2-competition` (commit `91f8d30`).
 
 ---
 
-## Engineering Overview & Problem Scale
+## Metric Formulation: Entity-Level Macro $F_{0.5}$
 
-Business Entity Resolution at industrial catalog scale requires matching ambiguous query entities against vast target catalogs without $O(N \cdot M)$ pairwise explosion. In the Amazon ML Challenge 2026, the dataset presents distinct structural hurdles:
+The competition was evaluated on **Macro $F_{0.5}$ averaged across all Source 1 query entities**, rather than a global pooled/micro confusion matrix over all candidate pairs.
 
-1. **Massive Cardinality & Asymmetry:**
-   - **Query Entities (Source 1):** 1,732,544 test queries partitioned across India (809,986 S1s), United States (663,106 S1s), and France (259,452 S1s).
-   - **Target Entities (Source 2 + Source 3):** 9,969,589 candidate catalog records.
-   - Full Cartesian product equals $\approx 1.72 \times 10^{13}$ possible pairs, making direct comparison computationally intractable.
-2. **Heterogeneous & Noisy Attributes:**
-   - Target entities exhibit severe field omissions: empty address fields in 7,712+ target links, missing postal codes, and truncated business trade names.
-   - Multilingual variations including Latin and Devanagari script transliterations (e.g., Hindi phonetic variations vs. standardized English commercial names).
-3. **Metric Penalty Asymmetry ($\text{Macro } F_{0.5}$):**
-   - The competition optimizes Macro $F_{0.5}$. Under the standard $F_\beta$ formulation with $\beta = 0.5$:
-     ```text
-     F_0.5 = (1 + 0.5^2) * (Precision * Recall) / (0.5^2 * Precision + Recall)
-           = (1.25 * Precision * Recall) / (0.25 * Precision + Recall)
-     ```
-   - Expressed in terms of True Positives ($TP$), False Positives ($FP$), and False Negatives ($FN$):
-     ```text
-     F_0.5 = TP / (TP + 0.2 * FN + 0.8 * FP)
-     ```
-   - In contrast to $F_1$ (where $FP$ and $FN$ both carry weight $0.5$), $F_{0.5}$ weights $FP$ at $0.8$ and $FN$ at $0.2$. The ratio of penalties is:
-     ```text
-     Penalty(FP) / Penalty(FN) = 0.8 / 0.2 = 4.0
-     ```
-   - A single false positive pair degrades the score **four times as heavily** as an omitted true link. The decision boundary must enforce strict thresholding and bipartite conflict resolution.
+### 1. Per-Entity Score Formulation
+
+For each individual Source 1 query entity $s \in S_1$, let $T_s$ denote the set of ground truth matching target IDs (Source 2 and Source 3), and let $P_s$ denote the set of predicted matching target IDs:
+
+- **Singleton Entities ($|T_s| = 0$, no true catalog matches):**
+  - If $P_s = \emptyset \implies F_{0.5}(s) = 1.0$ (correctly abstained from linking).
+  - If $P_s \ne \emptyset \implies F_{0.5}(s) = 0.0$ (spurious false positive match asserted).
+- **Non-Singleton Entities ($|T_s| > 0$):**
+  - If $P_s = \emptyset \implies F_{0.5}(s) = 0.0$ (missed all true links).
+  - Let $TP_s = |T_s \cap P_s|$ be the count of correctly predicted links:
+    - If $TP_s = 0 \implies F_{0.5}(s) = 0.0$.
+    - If $TP_s > 0$:
+      $$\text{Precision}(s) = \frac{TP_s}{|P_s|}, \quad \text{Recall}(s) = \frac{TP_s}{|T_s|}$$
+      $$F_{0.5}(s) = \frac{(1 + 0.5^2) \cdot \text{Precision}(s) \cdot \text{Recall}(s)}{0.5^2 \cdot \text{Precision}(s) + \text{Recall}(s)} = \frac{1.25 \cdot \text{Precision}(s) \cdot \text{Recall}(s)}{0.25 \cdot \text{Precision}(s) + \text{Recall}(s)}$$
+
+Expressing this directly in terms of true positives ($TP_s$), false positives ($FP_s = |P_s \setminus T_s|$), and false negatives ($FN_s = |T_s \setminus P_s|$):
+
+$$F_{0.5}(s) = \frac{TP_s}{TP_s + 0.2 \cdot FN_s + 0.8 \cdot FP_s}$$
+
+### 2. Penalty Asymmetry
+
+In standard $F_1$, false positives and false negatives carry identical weight ($0.5 \cdot FN + 0.5 \cdot FP$). In $F_{0.5}$, the coefficient on $FP_s$ is $0.8$ while the coefficient on $FN_s$ is $0.2$:
+
+$$\frac{\text{Penalty}(FP)}{\text{Penalty}(FN)} = \frac{0.8}{0.2} = 4.0$$
+
+Asserting a spurious match ($FP$) incurs **four times the penalty** of failing to recall a true link ($FN$).
+
+### 3. Macro Aggregation Across the Corpus
+
+The overall competition score is the unweighted arithmetic mean across all $N$ Source 1 entities in the evaluation split:
+
+$$\text{Macro } F_{0.5} = \frac{1}{|S_1|} \sum_{s \in S_1} F_{0.5}(s)$$
+
+In the full test set ($|S_1| = 1,732,544$), each query entity contributes with equal weight $1 / |S_1|$, making precision preservation on singletons and high-volume entities equally critical.
+
+*Implementation Reference:* [`src/er/metric.py`](https://github.com/AkshayAlgoX/amlc26-harness/blob/91f8d30cd1789ffe8d0418aa25c1cd086ae93667/src/er/metric.py) (commit `91f8d30` on branch `ein/agy2-competition`).
 
 ---
 
@@ -145,7 +161,7 @@ Evaluates candidate pairs across multiple complementary indexing channels:
   - Multi-token string similarities (Levenshtein distance, Jaro-Winkler distance, token containment ratios, longest common substring).
   - Geographic compatibility scores (country consistency, postal prefix matching, street numeric parity).
   - Token frequency distributions and TF-IDF cosine similarities.
-- **Neural Cross-Encoder Integration:** Evaluates top candidates through [`BAAI/bge-reranker-v2-m3`](models/ALLOWED.md) (0.568B parameters, Apache-2.0 licensed, pinned revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`), producing dense semantic alignment probabilities.
+- **Neural Cross-Encoder Integration:** Evaluates top candidates through `BAAI/bge-reranker-v2-m3` (0.568B parameters, Apache-2.0 licensed, pinned revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`), producing dense semantic alignment probabilities.
 - Stage-2 LightGBM Ranker trained with 5-fold out-of-fold cross-validation.
 
 #### 5. Expected Macro $F_{0.5}$ Optimization & Bipartite Conflict Resolution (Stage 4)
@@ -192,8 +208,8 @@ The codebase adheres to rigorous experimental integrity standards defined in [`A
    - **SHA-256 Manifest Pinning:** Every intermediate artifact is accompanied by a cryptographic manifest (`export/manifest.json`), ensuring exact reproducibility across machines.
 3. **Fail-Closed Model Registry Governance ([`models/ALLOWED.md`](models/ALLOWED.md)):**
    - The model registry enforces strict competition rules ($\le 8\text{B}$ parameter cap, permissive Apache-2.0 or MIT licensing, pinned HF revisions).
-   - Candidate models pre-filled in the registry (e.g. Qwen3-VL-8B, PaddleOCR-VL, DeBERTa-v3) remain in an unverified `TODO` state until human-checked.
-   - **Only one model** was formally audited, verified, and flipped to status **`OK`** for competition inference: **`BAAI/bge-reranker-v2-m3`** (0.568B parameters, revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`, Apache-2.0). All unverified models were strictly blocked from execution.
+   - In this baseline repository snapshot (`main`), candidate models inventoried in `models/ALLOWED.md` (e.g. Qwen3-VL-8B, PaddleOCR-VL, DeBERTa-v3) remain in an unverified `TODO` state.
+   - Formal audit and approval of **`BAAI/bge-reranker-v2-m3`** (0.568B parameters, revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`, Apache-2.0) was established in historical commit `30f12e7` on branch `main` and maintained in competition branches (`origin/ein/agy2-competition`), where it served as the sole authorized neural reranker. All unverified candidates were strictly blocked from execution.
 
 ---
 
@@ -205,7 +221,7 @@ amlc26-harness/
 ├── CLAUDE.md                  # Architectural guidelines and diff review checklist
 ├── Makefile                   # High-level automation targets (setup, test, smoke, blend)
 ├── README.md                  # Architectural documentation and competition benchmark
-├── config.yaml                # Primary competition configuration (paths, columns, metric)
+├── config.yaml                # General harness configuration (defaults to rehearsal baseline)
 ├── config.synthetic.yaml      # Sandboxed configuration for synthetic verification
 ├── requirements.txt           # Python dependency specifications
 │
@@ -216,7 +232,7 @@ amlc26-harness/
 │   ├── data.py                # Raw dataset loaders and fold partition iterators
 │   ├── folds.py               # Deterministic k-fold and stratified group splitting
 │   ├── make_submission.py     # Production submission formatter
-│   ├── metric.py              # Competition metrics (Macro F0.5, SMAPE, RMSE, F1)
+│   ├── metric.py              # General metric library (sMAPE, MAPE, F1-extraction, RMSE)
 │   ├── registry.py            # Experiment tracker, OOF artifact manager, and contract validator
 │   └── validate.py            # Submission row-count, header, and null-check validator
 │
@@ -226,7 +242,7 @@ amlc26-harness/
 │   └── NOTEBOOK_SNIPPET.md           # External notebook logging integration
 │
 ├── models/
-│   └── ALLOWED.md             # Cryptographically pinned & human-verified pretrained models
+│   └── ALLOWED.md             # Cryptographically pinned pretrained model registry
 │
 ├── docs/                      # Technical reports, starter documentation, and proof
 │   ├── STARTER_REPO_README.md # Original day-1 harness starter documentation
@@ -268,7 +284,7 @@ pip install -r requirements.txt
 
 ### 2. Run Automated Contract & Metric Tests
 
-The repository includes 18 unit tests validating fold isolation, experiment registry serialization, zero data leakage, and metric mathematical correctness:
+The repository includes 18 unit tests validating fold isolation, experiment registry serialization, zero data leakage, and baseline metric mathematics:
 
 ```bash
 PY=python3 make test
@@ -282,7 +298,7 @@ python3 -m pytest -q tests
 ```
 
 > [!NOTE]
-> Tests are executed via local test harnesses. No remote GitHub Actions workflow is currently configured for this repository (`.github/workflows/` is intentionally absent).
+> Tests are executed via local test harnesses. No remote GitHub Actions workflow is currently configured for this repository (`.github/workflows/` is intentionally absent). The 18 tests in `tests/` cover core contract and baseline metric functionality; 2026 Entity Resolution scoring tests reside in `tests/test_er.py` on the competition branch.
 
 ### 3. Run the End-to-End Synthetic Smoke Pipeline
 
