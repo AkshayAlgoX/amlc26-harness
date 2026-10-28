@@ -211,7 +211,7 @@ The codebase adheres to rigorous experimental integrity standards defined in [`A
 3. **Model Registry Policy ([`models/ALLOWED.md`](models/ALLOWED.md)):**
    - `models/ALLOWED.md` is a manually maintained allow-list: a person checks the model card, records parameter count, licence and pinned Hugging Face revision, and sets the status to `OK`. The policy (at most 8B parameters, permissive licence, pinned revision) is followed by convention; no code in this repository reads the file or blocks a model that is not listed.
    - On `main`, every candidate in the file (e.g. Qwen3-VL-8B, PaddleOCR-VL, DeBERTa-v3) is still `TODO`. `main` does not record an approved model.
-   - The approval of **`BAAI/bge-reranker-v2-m3`** (~0.57B parameters, revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`, Apache-2.0, status `OK`) is published on branch [`ein/agy2-exp7-ce`](../../blob/ein/agy2-exp7-ce/models/ALLOWED.md) (commit `55226f8`, 2026-09-26). An approval commit `30f12e7` of the same date exists in the maintainer's local checkout but has not been pushed to GitHub.
+   - The approval of **`BAAI/bge-reranker-v2-m3`** (~0.57B parameters, revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`, Apache-2.0, status `OK`) is published on branch [`ein/agy2-exp7-ce`](https://github.com/AkshayAlgoX/amlc26-harness/blob/ein/agy2-exp7-ce/models/ALLOWED.md) (commit `55226f8`, 2026-09-26). An approval commit `30f12e7` of the same date exists in the maintainer's local checkout but has not been pushed to GitHub.
 
 ---
 
