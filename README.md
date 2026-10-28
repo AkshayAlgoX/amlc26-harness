@@ -176,12 +176,14 @@ Early pipeline runbook drafts (`amlc26-agy2/docs/PIPELINE_RUNBOOK.md`) prelimina
 
 In commit `1e1ff9947dd3dc31244ac1c501e0b5d50fb4683e`, the production partition plan was finalized in `experiments/configs/test_shards.json` to **17 deterministic shards**:
 
-| Target Country | Total S1 Queries | Production Shards | Average S1 / Shard | Peak RAM Observed |
-| :--- | :--- | :--- | :--- | :--- |
-| **India** | 809,986 | **9 shards** | $\approx 89,998$ queries | $\le 16.8\text{ GB}$ |
-| **United States** | 663,106 | **5 shards** | $\approx 132,621$ queries | $\le 16.5\text{ GB}$ |
-| **France** | 259,452 | **3 shards** | $\approx 86,484$ queries | $\le 14.8\text{ GB}$ |
-| **Total** | **1,732,544** | **17 shards** | — | — |
+| Target Country | Total S1 Queries | Production Shards | Average S1 / Shard |
+|---|---|---|---|
+| **India** | 809,986 | **9 shards** | $\approx 89,998$ queries |
+| **United States** | 663,106 | **5 shards** | $\approx 132,621$ queries |
+| **France** | 259,452 | **3 shards** | $\approx 86,484$ queries |
+| **Total** | **1,732,544** | **17 shards** | — |
+
+Query counts and shard counts are from `experiments/configs/test_shards.json` on the competition branches. Per-shard peak memory was not recorded in this repository and is not reported here.
 
 ### Platform Constraint & Shard Target Analysis
 
@@ -206,10 +208,10 @@ The codebase adheres to rigorous experimental integrity standards defined in [`A
    - **`C4` / `C5`:** 61-feature matcher matrices with cross-fitted probabilities.
    - **`C6`:** Exported decision thresholds, hyperparameters, and feature schemas.
    - **SHA-256 Manifest Pinning:** Every intermediate artifact is accompanied by a cryptographic manifest (`export/manifest.json`), ensuring exact reproducibility across machines.
-3. **Fail-Closed Model Registry Governance ([`models/ALLOWED.md`](models/ALLOWED.md)):**
-   - The model registry enforces strict competition rules ($\le 8\text{B}$ parameter cap, permissive Apache-2.0 or MIT licensing, pinned HF revisions).
-   - In this baseline repository snapshot (`main`), candidate models inventoried in `models/ALLOWED.md` (e.g. Qwen3-VL-8B, PaddleOCR-VL, DeBERTa-v3) remain in an unverified `TODO` state.
-   - Formal audit and approval of **`BAAI/bge-reranker-v2-m3`** (0.568B parameters, revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`, Apache-2.0) was established in historical commit `30f12e7` on branch `main` and maintained in competition branches (`origin/ein/agy2-competition`), where it served as the sole authorized neural reranker. All unverified candidates were strictly blocked from execution.
+3. **Model Registry Policy ([`models/ALLOWED.md`](models/ALLOWED.md)):**
+   - `models/ALLOWED.md` is a manually maintained allow-list: a person checks the model card, records parameter count, licence and pinned Hugging Face revision, and sets the status to `OK`. The policy (at most 8B parameters, permissive licence, pinned revision) is followed by convention; no code in this repository reads the file or blocks a model that is not listed.
+   - On `main`, every candidate in the file (e.g. Qwen3-VL-8B, PaddleOCR-VL, DeBERTa-v3) is still `TODO`. `main` does not record an approved model.
+   - The approval of **`BAAI/bge-reranker-v2-m3`** (~0.57B parameters, revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`, Apache-2.0, status `OK`) is published on branch [`ein/agy2-exp7-ce`](../../blob/ein/agy2-exp7-ce/models/ALLOWED.md) (commit `55226f8`, 2026-09-26). An approval commit `30f12e7` of the same date exists in the maintainer's local checkout but has not been pushed to GitHub.
 
 ---
 
@@ -242,7 +244,7 @@ amlc26-harness/
 │   └── NOTEBOOK_SNIPPET.md           # External notebook logging integration
 │
 ├── models/
-│   └── ALLOWED.md             # Cryptographically pinned pretrained model registry
+│   └── ALLOWED.md             # Manually maintained allow-list of pretrained models (pinned revisions)
 │
 ├── docs/                      # Technical reports, starter documentation, and proof
 │   ├── STARTER_REPO_README.md # Original day-1 harness starter documentation
