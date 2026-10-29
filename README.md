@@ -17,21 +17,15 @@ In the Amazon ML Challenge 2026 Machine Learning Round, team **Duty_Drive** comp
 
 - **Public Leaderboard Standing:** **Rank #1,200** (Machine Learning Round)
 - **Public Leaderboard Score:** **0.978758** (Macro $F_{0.5}$ metric)
-- **Finish Timestamp:** September 27, 2026, 10:31 PM IST
 - **Evaluation Status:** Performance recorded at the close of the Machine Learning round on the Unstop public leaderboard. The final official private leaderboard standing was subject to subsequent organizer validation.
 - **Team Composition (`Duty_Drive`):**
   - **Nikhil V S** (*Registered Team Leader on Unstop*) — East West Institute of Technology (EWIT), Bengaluru, Karnataka
   - **Akshaya R** (*Systems, Harness & Retrieval Lead; Captain of `ein` Track*) — BGS College of Engineering and Technology (BGSCET), Bengaluru, Karnataka
   - **Sankeerth S** (*Feature Engineering & Modeling Contributor*) — Don Bosco Institute of Technology (DBIT), Bangalore, Karnataka
 
-### Authentic Verification Evidence
+### Evidence
 
-![Amazon ML Challenge 2026 Unstop Machine Learning Round Banner](docs/proof/amlc2026-unstop-result-banner.png)
-
-![Amazon ML Challenge 2026 Rank 1200 Details Modal](docs/proof/amlc2026-rank-1200-details.png)
-
-> [!NOTE]
-> All personal contact details (such as teammate mobile phone numbers displayed on internal registration screens) have been strictly redacted from committed assets to protect team member privacy in accordance with data governance standards.
+The rank and score above are from the Unstop result page for team `Duty_Drive` (public leaderboard, Machine Learning Round). That page is not publicly linkable and no screenshot is published here; the result can be shown on request.
 
 ---
 
@@ -246,12 +240,9 @@ amlc26-harness/
 ├── models/
 │   └── ALLOWED.md             # Manually maintained allow-list of pretrained models (pinned revisions)
 │
-├── docs/                      # Technical reports, starter documentation, and proof
+├── docs/                      # Technical reports and starter documentation
 │   ├── STARTER_REPO_README.md # Original day-1 harness starter documentation
 │   ├── APPROACH_TEMPLATE.md   # Architectural reporting template
-│   ├── proof/                 # Authentic leaderboard proof banners and ranking details
-│   │   ├── amlc2026-rank-1200-details.png
-│   │   └── amlc2026-unstop-result-banner.png
 │   └── contributions/         # Chronological experiment and prompt audit trails
 │
 ├── scripts/                   # Utility scripts and end-to-end smoke verification
